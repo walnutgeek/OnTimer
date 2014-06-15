@@ -16,7 +16,10 @@ class Bounds:
     
   def get_id(self, name): 
     return self.lower + (int(name) - self.lower) % self.dim
-  
+  def check(self, n):
+      if n < self.lower or n > self.upper:
+           raise ValueError("n: %d is not between: %d and %d" % (n,self.lower,self.upper) )
+
   def parse(self, s):
     if s == '*' :
       return self.allrange
@@ -104,7 +107,7 @@ class ScheState:
     (s, m, h) = (self.exp.rules[i][self.refs[i]] for i in range(_MONTH_DAY))
     return datetime.datetime(y, md[0], md[1], h, m, s)
 
-  def str(self):
+  def __str__(self):
       return str(self.toDateTime())
 
 
@@ -132,22 +135,30 @@ class ScheExp:
     acc_rules[_YEAR] = cron_fields_map['Years'].parse(v[i] if len(v) == 7 else '*')
     class month_day_cache(dict):
       def __missing__(self, year):
+        cron_fields_map['Years'].check(year)
         dt = datetime.date(year, 1, 1)
-        delta = datetime.timedelta(days=1)
-        monthday = []
-        while dt.year == year:
-          weekday = dt.isoweekday() % 7
-          if dt.day in days and dt.month in months and weekday in weekdays:
-            monthday.append((dt.month, dt.day))
-          dt += delta
-        v = tuple(monthday)
-        self[year] = v
-        return v
+        try:
+            delta = datetime.timedelta(days=1)
+            monthday = []
+            while dt.year == year:
+              weekday = dt.isoweekday() % 7
+              if dt.day in days and dt.month in months and weekday in weekdays:
+                monthday.append((dt.month, dt.day))
+              dt += delta
+            v = tuple(monthday)
+            self[year] = v
+            return v
+        except OverflowError, e:
+          import sys
+          raise OverflowError, OverflowError( str(e) + ' year=%d dt=%s' % (year,str(dt)) ), sys.exc_info()[2]
+      
     acc_rules[_MONTH_DAY] = month_day_cache()
     self.rules = tuple(acc_rules)
     self.fixed_upper_bounds = tuple(len(self.rules[i]) for i in range(_MONTH_DAY))
    
   def state(self, dt):
+    if isinstance(dt, basestring):
+        dt = datetime.datetime(dt)
     y = dt.year
     md = (dt.month, dt.day)
     state = None
@@ -169,14 +180,10 @@ class ScheExp:
     cache = self.rules[_MONTH_DAY]
     while len(cache[y]) == 0:
       y += 1
-      if y > cron_fields_map['Years'].upper :
-        raise ValueError("year variable  reached upper bound")
     return y
 
   def back_year(self, y):
     cache = self.rules[_MONTH_DAY]
     while len(cache[y]) == 0:
       y -= 1
-      if y < cron_fields_map['Years'].lower :
-        raise ValueError("year variable reached lower bound")
     return y
