@@ -41,11 +41,11 @@ def find_tests_require():
 README = read('README.md')
 
 setup(
-    name='schepy',
+    name='ontimer',
     entry_points={
         'console_scripts': ['ontimer = ontimer.app:main']
     },
-    version=find_version('schepy', '__init__.py'),
+    version=find_version('ontimer', '__init__.py'),
     url='https://github.com/walnutgeek/OnTimer',
     author='Walnut Geek',
     author_email='wg@walnutgeek.com',
