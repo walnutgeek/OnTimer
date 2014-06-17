@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-SchePy simple schedule in python
+OnTimer - running stuff on time
 
 """
 __version__ = '0.1'
@@ -75,7 +75,7 @@ _HOURS = 2
 _MONTH_DAY = 3 
 _YEAR = 4
 
-class ScheState:
+class OnState:
   def __init__(self, exp, refs):
     self.exp = exp
     year=refs[_YEAR]
@@ -85,21 +85,21 @@ class ScheState:
   def shift(self, compIdx, direction):
     toReset = tuple(self.upper_bounds[i] - 1 if direction == -1 else 0 for i in range(compIdx))
     toCopy = tuple(self.refs[i] for i in range(compIdx + 1, _YEAR + 1))
-    return ScheState(self.exp, toReset + (self.refs[compIdx] + direction,) + toCopy)
+    return OnState(self.exp, toReset + (self.refs[compIdx] + direction,) + toCopy)
     
   def forward(self):
     for i in range(_YEAR):
       if self.refs[i] + 1 < self.upper_bounds[i]:
         return self.shift(i, 1)
     else:
-        return ScheState(self.exp, (0, 0, 0, 0, self.exp.forward_year(self.refs[_YEAR] + 1)))
+        return OnState(self.exp, (0, 0, 0, 0, self.exp.forward_year(self.refs[_YEAR] + 1)))
 
   def back(self):
     for i in range(_YEAR):
       if self.refs[i] > 0 :
         return self.shift(i, -1)
     else:
-        return ScheState(self.exp, (-1, -1, -1, -1, self.exp.back_year(self.refs[_YEAR] + 1)))
+        return OnState(self.exp, (-1, -1, -1, -1, self.exp.back_year(self.refs[_YEAR] + 1)))
     
   def toDateTime(self):
     y = self.refs[_YEAR]
@@ -111,12 +111,12 @@ class ScheState:
       return str(self.toDateTime())
 
 
-class ScheExp:
+class OnExp:
   def __init__(self, s):
     self.s = s
     v = s.split(' ')
     if len(v) < 5:
-        raise ValueError("SchePy expression should have at least 5 fields")
+        raise ValueError("OnTimer expression should have at least 5 fields")
     i = 0
     acc_rules = [(0,), None, None, None, None ]
     if len(v) > 5:
@@ -171,7 +171,7 @@ class ScheExp:
     else:
       md_index = 0
       y = self.forward_year(y + 1)
-    state = ScheState(self, (0, 0, 0, md_index, y))
+    state = OnState(self, (0, 0, 0, md_index, y))
     while state.toDateTime() < dt :
         state.forward()
     return state

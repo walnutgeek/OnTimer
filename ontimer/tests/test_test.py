@@ -2,7 +2,7 @@ import os
 import unittest
 
 from nose.tools import eq_
-from .. import ScheExp, ScheState
+from .. import OnExp, OnState
 import datetime
 from collections import defaultdict
 
@@ -10,14 +10,14 @@ from collections import defaultdict
 class TestTest(unittest.TestCase):
 
     def test_one_date(self):
-        exp = ScheExp("0 6 1,31 * tue,wed")
+        exp = OnExp("0 6 1,31 * tue,wed")
         st = exp.state(datetime.datetime(2014,6,13,0,0,0))
         print st
         #rules = exp.rules[schepy._MONTH_DAY][2014]
         eq_(str(st), "2014-07-01 06:00:00")
 
     def test_all_dates(self):
-        exp = ScheExp("0 6 1,31 * tue,wed")
+        exp = OnExp("0 6 1,31 * tue,wed")
         s = exp.state(datetime.datetime(1000,1,1,0,0,0))
         dd = defaultdict(list)
         ls = []

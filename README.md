@@ -1,5 +1,5 @@
-SchePy
+OnTimer
 ======
-[![Build Status](https://travis-ci.org/walnutgeek/SchePy.svg?branch=master)](https://travis-ci.org/walnutgeek/SchePy)
+[![Build Status](https://travis-ci.org/walnutgeek/OnTimer.svg?branch=master)](https://travis-ci.org/walnutgeek/OnTimer)
 
-Simple Scheduler 
+runs stuff on time

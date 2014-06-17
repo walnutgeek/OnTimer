@@ -43,15 +43,15 @@ README = read('README.md')
 setup(
     name='schepy',
     entry_points={
-        'console_scripts': ['schepy = schepy.app:main']
+        'console_scripts': ['ontimer = ontimer.app:main']
     },
     version=find_version('schepy', '__init__.py'),
-    url='https://github.com/walnutgeek/SchePy',
+    url='https://github.com/walnutgeek/OnTimer',
     author='Walnut Geek',
     author_email='wg@walnutgeek.com',
-    description="Simple python scheduler.",
+    description="OnTimer - running stuff on time.",
     long_description=README,
-    packages=['schepy', 'schepy.tests'],
+    packages=['ontimer', 'ontimer.tests'],
     include_package_data=True,
     install_requires=find_install_requires(),
     zip_safe=False,
@@ -59,10 +59,9 @@ setup(
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: Apache Public License 2.0',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    test_suite='schepy.tests',
+    test_suite='ontimer.tests',
     tests_require=find_tests_require(),
 )
