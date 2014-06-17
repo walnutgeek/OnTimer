@@ -1,8 +1,10 @@
-# On Expression
+# OnTimer Expression (OnExp)
 
 Defines when scheduled event need to occur.
 
 Space separated set of 5 to 8 fields. 5 fields expression includes all mandatory fielsda and backward compatiple with unix cron expression. 6 fields expression includes seconds, 7 fields - include seconds and year, and 8 - include all fields. 
+
+ATTENTION: W L # syntax is no implemented yet.
 
 |Field Name  | Mandatory |Allowed Values        | Allowed Special Characters |Value if Omitted| Implementation |
 |------------|:---------:|----------------------|----------------------------|:--------------:|----------------|
@@ -32,8 +34,12 @@ Space separated set of 5 to 8 fields. 5 fields expression includes all mandatory
 
 Design is inspired by original unix cron and [quart's crontrigger](http://quartz-scheduler.org/documentation/quartz-1.x/tutorials/crontrigger). 
 
-Intention is to be backward compatible with unix cron expressions as much as possible. Please file bugs if you find valid unix cron expression that does not work out of the box in SchePy. 
+Intention is to be backward compatible with unix cron expressions as much as possible. Please file bugs if you find valid unix cron expression that does 
+not work out of the box in OnTimer. 
 
-Quartz's crontrigger expression may need some modifications. SchePy treats day of the week field differently to be comliant with unix. Biggest difference is notation of  weekday number. If you port expressions you need substract 1 or better use names. For example '0 0 6 \* \* 2-6' expression meanes '6 am every work day' in quartz. It could be converted in SchePy as '0 0 \* \* 1-5' or  use names like '0 0 6 \* \* Mon-Fri'. I think you should use names anyway because it is easier to read.
+Quartz's crontrigger expression may need some modifications. OnTimer treats day of the week field differently from Quartz to be comliant with unix. 
+Biggest difference is notation of weekday number. If you port expressions you need substract 1 or better use names. For example in Quartz '0 0 6 \* \* 2-6' 
+expression means '6 am every work day'. It could be converted to OnExp as '0 0 \* \* 1-5' or better use names like '0 0 6 \* \* Mon-Fri'. I think you should 
+use names anyway because it is easier to read.
 
 
