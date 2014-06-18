@@ -2,20 +2,22 @@
 
 Defines when scheduled event need to occur.
 
-Space separated set of 5 to 8 fields. 5 fields expression includes all mandatory fielsda and backward compatiple with unix cron expression. 6 fields expression includes seconds, 7 fields - include seconds and year, and 8 - include all fields. 
+Contains of space separated set fields (see table). 5 fields expression includes all mandatory fieldsd  
+and backward compatiple with unix cron expression. 6 fields expression includes seconds, 7 fields - include seconds and year, and 8 - include all fields. 
 
-ATTENTION: W L # syntax is no implemented yet.
+ATTENTION: 'W' and 'L' syntax in 'Day of month', '#' syntax in 'Day of week' field and field 'Set of dates' is not implemented yet. Features will be 
+implemented once MVP functionality will be achieved.
 
-|Field Name  | Mandatory |Allowed Values        | Allowed Special Characters |Value if Omitted| Implementation |
-|------------|:---------:|----------------------|----------------------------|:--------------:|----------------|
-|Seconds     | no        | 0-59                 | * , - /                    | 0              |Bounds          |
-|Mins        | yes       | 0-59                 | * , - /                    |                |Bounds          |
-|Hours       | yes       | 0-23                 | * , - /                    |                |Bounds          |
-|Day of month| yes       | 1-31                 | * , - / W L                |                |Bounds(for now) |
-|Month       | yes       | 1-12 or JAN-DEC      | * , - /                    |                |NamedBounds     |
-|Day of week | yes       | 0-6,7 or SUN-SAT,SUN | * , - / #                  |                |NamedBounds     |
-|Year        | no        | 1900-2999            | * , - /                    | *              |Bounds          |
-|Set of dates| no        | YYYYMMDD             | * , -                      | *              |-               |
+|Field Name  | Mandatory |Allowed Values        | Allowed Special Characters |Value if Omitted| Implementation      |
+|------------|:---------:|----------------------|----------------------------|:--------------:|---------------------|
+|Seconds     | no        | 0-59                 | * , - /                    | 0              |Bounds               |
+|Mins        | yes       | 0-59                 | * , - /                    |                |Bounds               |
+|Hours       | yes       | 0-23                 | * , - /                    |                |Bounds               |
+|Day of month| yes       | 1-31                 | * , - / W L                |                |Bounds(for now)      |
+|Month       | yes       | 1-12 or JAN-DEC      | * , - /                    |                |NamedBounds          |
+|Day of week | yes       | 0-6,7 or SUN-SAT,SUN | * , - / #                  |                |NamedBounds(for now) |
+|Year        | no        | 1900-2999            | * , - /                    | *              |Bounds               |
+|Set of dates| no        | YYYYMMDD             | * , -                      | *              |(not implemented yet)|
 
 ## Special characters
 
