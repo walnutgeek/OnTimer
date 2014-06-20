@@ -50,7 +50,7 @@ Holds set of variables specific to eventType
 | member     | Description                            |
 |------------|----------------------------------------|
 | event      | ```Event``` |
-| action     | either ```emitted```, ```success``` , ```failure```, or ```final``` |
+| action     | either ```emitted```, ```invoked``` , ```success``` , ```failure```, or ```final``` |
 | flowKey    | flow associated |
 | taskKey    | task associated |
 | occur_dt   | |

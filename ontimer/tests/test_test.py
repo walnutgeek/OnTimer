@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 
 from nose.tools import eq_
@@ -6,6 +7,8 @@ from .. import OnExp, OnState
 import datetime
 from collections import defaultdict
 
+#to test if sniffer is not hanging uncomment next line & save
+#raise Exception()
 
 class TestTest(unittest.TestCase):
 
@@ -33,3 +36,12 @@ class TestTest(unittest.TestCase):
         eq_(len(dd),2000)
         eq_(len(ls)/len(dd),5)
  
+    def test_dbcreation(self):
+        from ..db import create_db
+        dir = os.path.abspath("test-out")
+        if os.path.isdir(dir):
+          shutil.rmtree(dir)
+        os.mkdir(dir)
+        create_db(os.path.join(dir, "test.db"))
+        #raise Exception(os.path.abspath("."))
+    
