@@ -56,3 +56,4 @@ docs/_build/
 /.README.md.html
 /.MinimalViableProduct.md.html
 /sample-config.yaml
+/test-out
