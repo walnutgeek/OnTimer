@@ -6,6 +6,8 @@ from nose.tools import eq_
 from .. import OnExp, OnState
 import datetime
 from collections import defaultdict
+import sqlite3
+
 
 #to test if sniffer is not hanging uncomment next line & save
 #raise Exception()
@@ -42,6 +44,9 @@ class TestTest(unittest.TestCase):
         if os.path.isdir(dir):
           shutil.rmtree(dir)
         os.mkdir(dir)
-        create_db(os.path.join(dir, "test.db"))
+        conn = sqlite3.connect(os.path.join(dir, "test.db"))
+        conn.execute('pragma foreign_keys = on')
+        eq_(1, list(conn.execute('pragma foreign_keys'))[0][0])
+        create_db(conn)
         #raise Exception(os.path.abspath("."))
     

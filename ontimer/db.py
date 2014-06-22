@@ -1,7 +1,7 @@
 import sqlite3
+from . import event
 
-def create_db(dbpath):
-    conn = sqlite3.connect(dbpath)
+def create_db(conn):
     c = conn.cursor()
     
     c.execute('''CREATE TABLE event_type (
@@ -14,15 +14,31 @@ def create_db(dbpath):
     event_id int primary key,
     event_type_id int references event_type(event_type_id),
     event_string text, 
-    emitted_dt timestamp
+    event_state int CHECK( event_state IN (%s) ) NOT NULL DEFAULT 1,
+    started_dt timestamp not null,
+    finished_dt timestamp not null,
+    eta_dt timestamp null default null
+    )''' % (','.join( ( str(s.value) for s in event.EventState) )))
+
+    c.execute('''CREATE TABLE task (
+    task_id int primary key,
+    event_type_id int references event_type(event_type_id),
+    task_name text
     )''')
 
-    c.execute('''CREATE TABLE event_stage (
-    event_stage_id int primary key,
+    c.execute('''CREATE TABLE event_task (
+    event_task_id int primary key,
     event_id int references event(event_id),
-    flow_key text,
-    task_key text,
-    occur_dt timestamp
+    task_id int references task(task_id),
+    task_state int CHECK( task_state IN (%s) ) NOT NULL DEFAULT 1,
+    run_at_dt timestamp not null
+    )'''% (','.join( ( str(s.value) for s in event.TaskState) )))
+    
+    c.execute('''CREATE TABLE event_task_artifact (
+    artifact_id int primary key,
+    event_task_id int references event_task(event_task_id),
+    json_value text,
+    stored_dt timestamp
     )''')
     
     c.execute('''CREATE TABLE generator (
