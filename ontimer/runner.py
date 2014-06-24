@@ -37,8 +37,8 @@ class Runner:
         
         
 class ProcessRunner(Runner):
-    def __init__(self,node):
-      self.cmd = node('cmd').split()
+    def __init__(self,node,event):
+        self.cmd = parseCmdLine( node['cmd'].format( *event.vars ) )
     
-    def run(self,):
-        subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    def run(self,ioloop):
+        subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
