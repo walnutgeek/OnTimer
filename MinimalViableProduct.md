@@ -1,20 +1,57 @@
-# Minimal Viable Product
+# OnTimer - Event scheduling and processing
 
-## Goals
+## Functionality
 
-Build system that generate and process events. For any given event type there is set of 
-generators which can emit events of the type and task flows which process them. Flow is collection of tasks with 
-dependencies between tasks within flow. Flow can be view directed acyclic graph with task as nodes and dependencies as edges. 
-There is no dependencies pointing outside of the flow. Outside dependencies have to be handled thru event generators by 
-emitting new events. Generators should be able to subscribe to event stages. Generator should be able to maintain state, to provide ability 
-to hold on creation of next event until previous one achieve certain stage.
+OnTimer is system that generate and process events. For any given event type there is set of 
+generators which can emit events of the type and task  which process them. 
+
+### Tasks
+
+Each eventType can have collection of tasks with dependencies between tasks. There are 3 system tasks that 
+has special meaning:
+
+| System task     | Description                            |
+|------------|----------------------------------------|
+| ``begin``  | first task that executed. all tasks that does not specify dependency implicitly depend on ```begin```    |
+| ``complete``  | task when executed marks event completed. This task implicitly depend on all end state tasks in the  main flow.  |
+| ``eta``  | task that invoked when event's ETA time reached. All tasks that directly or indirectly depend on ``eta`` are considered part of the ETA flow. |
+
+Once completed task produce with success/failure outcome. Upon success depending tasks will be invoked. Failed tasks 
+can be set up to retry at later time .
+
+#### Main and ETA tasks
+
+I already mentioned that all tasks that directly or indirectly depend on ``eta`` are considered part of ETA flow. 
+ETA tasks carry important role in system they help system to recover automatically or notify administrator.
+
+Main flow carry out event processing and always get executed. ETA flow my not be executed, if event completed 
+before ETA time or ETA time was not specified for event. No task can be part of Main and ETA flow at the same 
+time. Or in other words config will not be accepted if there are tasks that depend on ``begin`` and ``eta`` at 
+the same time. 
+
+All system tasks does not have to be defined in config. By default all system tasks implementation is empty, 
+once they executed, system tasks will complete with success immediately. They still can be defined in config for example to define 
+different implementation. 
+
+If you choose to define ``begin`` and ``eta`` they cannot have any dependencies because they initial states in task flow. 
+Contrary ``complete`` can define dependencies and it may be desired if we want mark event completed earlier then all tasks in 
+main flow completed successfully. ``complete`` cannot depend on ETA flow tasks.
+ 
+### Generators
+
+Event generator emits events based on timer or subscribed event stages. Generator should be able to maintain state, 
+to provide ability to hold on creation of next event until previous one achieve completed stage.
 
 EventGenerator is not only source of events. Events could be emitted by user input or by tasks itself. 
 
+### API
 Python API and command line tool will be provided for tasks to generate events. Tool and API should be smart enough 
 to record on which task invocation (event stage) new event was created, so it could be presented on UI.
 
-API/command line tool should provide ability for tasks to publish arifacts: stdout, stderr, datasets, reports, documents and etc. 
+API/command line tool should provide ability for tasks to publish arifacts: files, datasets, reports, documents and etc. 
+
+
+### UI
 
 UI should allow to:
   * Inspect general structure: events, generators, flows. 
@@ -23,7 +60,7 @@ UI should allow to:
   * Have ability to pause/restart on event, flow, and task level.
   * Inspect initialize and reset state of generator.
   
-## Design
+## Object Design
 
 ###EventType 
 | member     | Description                            |
@@ -36,16 +73,19 @@ UI should allow to:
   
 ###Event
 
-Holds set of variables specific to eventType
+Holds set of variables defined by eventType
 
 | member     | Description                            |
 |------------|----------------------------------------|
 | eventType  | ```EventType``` |
-| eventKey   | unique auto generated id               |
-| valueDict  | values for all variables               |
+| eventKey   | unique auto generated id |
+| valueDict  | values for all variables |
+| started   | time when event initiated |
+| finished   | time when event finished  |
+| eta | time when eta flow will be invoked |
 | \_\_str\_\_()   | string representation of event like: ```eventType:val1,val2,val3``` |
 
-### EventStage
+### EventStage or EventTask
 
 | member     | Description                            |
 |------------|----------------------------------------|

@@ -5,8 +5,32 @@ Created on Jun 21, 2014
 '''
 from enum import Enum
 
-EventState = Enum('EventState','active eta_breach success skip fail')
-TaskState = Enum('TaskState','scheduled running success skip not_applicable fail')
+class EventState(Enum):
+    active = 1
+    eta_breach = 2 
+    success = 3
+    skip = 4
+    paused = 5
+    fail = 101
+
+class TaskState(Enum):
+    scheduled = 1
+    running = 2
+    success = 3
+    skip = 4
+    fail = 101
+
+class EventType:
+    '''
+    on event
+    '''
+
+
+    def __init__(self,yaml):
+        '''
+        Constructor
+        '''
+        pass
 
 class Event:
     '''

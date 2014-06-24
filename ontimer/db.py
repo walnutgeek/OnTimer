@@ -15,10 +15,11 @@ def create_db(conn):
     event_type_id int references event_type(event_type_id),
     event_string text, 
     event_state int CHECK( event_state IN (%s) ) NOT NULL DEFAULT 1,
+    generator_id int references generator(generator_id),
     started_dt timestamp not null,
     finished_dt timestamp not null,
     eta_dt timestamp null default null
-    )''' % (','.join( ( str(s.value) for s in event.EventState) )))
+    )''' % ','.join( str(s.value) for s in event.EventState) )
 
     c.execute('''CREATE TABLE task (
     task_id int primary key,
@@ -32,29 +33,23 @@ def create_db(conn):
     task_id int references task(task_id),
     task_state int CHECK( task_state IN (%s) ) NOT NULL DEFAULT 1,
     run_at_dt timestamp not null
-    )'''% (','.join( ( str(s.value) for s in event.TaskState) )))
+    )'''% ','.join(  str(s.value) for s in event.TaskState ) )
     
     c.execute('''CREATE TABLE event_task_artifact (
     artifact_id int primary key,
     event_task_id int references event_task(event_task_id),
-    json_value text,
+    name text,
+    value text,
     stored_dt timestamp
     )''')
     
     c.execute('''CREATE TABLE generator (
     generator_id int primary key,
     event_type_id int references event_type(event_type_id),
-    generator_name text
+    generator_name text, 
+    prev_event_id int null references event(event_id) ,
+    current_event_id int null references event(event_id)
     )''')
-
-    c.execute('''CREATE TABLE generator_state (
-    generator_state_id int primary key,
-    generator_id int references generator(generator_id),
-    event_id int references event(event_id)
-    )''')
-
-    c.execute('''CREATE UNIQUE INDEX generator_state_xref 
-    ON generator_state (generator_id,event_id) ''')
 
     c.execute('''CREATE TABLE config (
     config_id int primary key,
