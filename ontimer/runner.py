@@ -27,7 +27,6 @@ def parseCmdLine(input):
                     acc = ''
             else:
                 acc += x
-    
     if acc:
         yield acc
 
@@ -39,6 +38,4 @@ class Runner:
 class ProcessRunner(Runner):
     def __init__(self,node,event):
         self.cmd = parseCmdLine( node['cmd'].format( *event.vars ) )
-    
-    def run(self,ioloop):
-        subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.process = subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)

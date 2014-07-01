@@ -39,13 +39,12 @@ class TestTest(unittest.TestCase):
         eq_(len(ls)/len(dd),5)
  
     def test_dbcreation(self):
-        from ..db import create_db
+        from ..db import create_db, connect_db
         dir = os.path.abspath("test-out")
         if os.path.isdir(dir):
-          shutil.rmtree(dir)
+            shutil.rmtree(dir)
         os.mkdir(dir)
-        conn = sqlite3.connect(os.path.join(dir, "test.db"))
-        conn.execute('pragma foreign_keys = on')
+        conn = connect_db(dir,filename="test.db")
         eq_(1, list(conn.execute('pragma foreign_keys'))[0][0])
         create_db(conn)
         #raise Exception(os.path.abspath("."))

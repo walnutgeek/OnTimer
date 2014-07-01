@@ -13,42 +13,45 @@ has special meaning:
 | System task     | Description                            |
 |------------|----------------------------------------|
 | ``begin``  | first task that executed. all tasks that does not specify dependency implicitly depend on ```begin```    |
-| ``complete``  | task when executed marks event completed. This task implicitly depend on all end state tasks in the  main flow.  |
-| ``eta``  | task that invoked when event's ETA time reached. All tasks that directly or indirectly depend on ``eta`` are considered part of the ETA flow. |
+| ``complete``  | when this task executed, it marks event completed. This task implicitly depend on all end state tasks in the  main flow.  |
+| ``eta``  | first task in eta flow. all tasks that does not specify dependency implicitly depend on ```eta``` |
 
 Once completed task produce with success/failure outcome. Upon success depending tasks will be invoked. Failed tasks 
 can be set up to retry at later time .
 
-#### Main and ETA tasks
+#### Main and ETA flows
 
-I already mentioned that all tasks that directly or indirectly depend on ``eta`` are considered part of ETA flow. 
-ETA tasks carry important role in system they help system to recover automatically or notify administrator.
 
-Main flow carry out event processing and always get executed. ETA flow my not be executed, if event completed 
-before ETA time or ETA time was not specified for event. No task can be part of Main and ETA flow at the same 
-time. Or in other words config will not be accepted if there are tasks that depend on ``begin`` and ``eta`` at 
-the same time. 
+Main flow carry out event processing and always get executed. ETA flows carry secondary role in system, 
+it help system to recover automatically or notify users about delay. ETA flow will not be executed at all, 
+if event completed before ETA time or ETA time was not specified for event. Names of tasks across both 
+flows should be unique. ETA's tasks can depend on main flow tasks, but not other way around. Or in other 
+words config will be rejected if there are tasks in main flow lists ETA's task as dependency .
 
-All system tasks does not have to be defined in config. By default all system tasks implementation is empty, 
-once they executed, system tasks will complete with success immediately. They still can be defined in config for example to define 
-different implementation. 
+All system tasks does not have to be defined in config. By default all system tasks implementation 
+is empty (like /bin/true). Once they executed, system tasks will complete with success immediately. 
+They still can be defined in config for example to define different implementation. 
 
-If you choose to define ``begin`` and ``eta`` they cannot have any dependencies because they initial states in task flow. 
-Contrary ``complete`` can define dependencies and it may be desired if we want mark event completed earlier then all tasks in 
-main flow completed successfully. ``complete`` cannot depend on ETA flow tasks.
+If you choose to define ``begin`` and ``eta`` they cannot have any dependencies because they initial 
+states in task flow. Contrary ``complete`` can define dependencies and it may be desired if we want 
+mark event completed earlier then all tasks in main flow completed successfully. ``complete`` cannot 
+depend on ETA flow tasks.
  
 ### Generators
 
-Event generator emits events based on timer or subscribed event stages. Generator should be able to maintain state, 
-to provide ability to hold on creation of next event until previous one achieve completed stage.
+Event generator emits events based on timer or subscribed event stages. Generator should be able to 
+maintain state, to provide ability to hold on creation of next event until previous one achieve completed 
+stage.
 
 EventGenerator is not only source of events. Events could be emitted by user input or by tasks itself. 
 
 ### API
-Python API and command line tool will be provided for tasks to generate events. Tool and API should be smart enough 
-to record on which task invocation (event stage) new event was created, so it could be presented on UI.
+Python API and command line tool will be provided for tasks to generate events. Tool and API should 
+be smart enough to record on which task invocation (event stage) new event was created, so it could 
+be presented on UI.
 
-API/command line tool should provide ability for tasks to publish arifacts: files, datasets, reports, documents and etc. 
+API/command line tool should provide ability for tasks to publish arifacts: files, datasets, 
+reports, documents and etc. 
 
 
 ### UI
@@ -134,7 +137,7 @@ specify how to run task and measure success or failure
 |-----------|----------------------------------------|
 | run()     | runs task                              |
 
-### OsCmdRunner
+### ProcessRunner
 
 | member       | Description |
 |--------------|----------------------------------------|

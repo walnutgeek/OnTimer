@@ -1,6 +1,20 @@
 import sqlite3
+import os
 from . import event
 
+default_filename = '.ontimer'
+
+def dbfile(dir, filename = default_filename):
+    return os.path.join(dir, filename)
+
+def db_exists(dir, filename = default_filename):
+    return os.path.exists(dbfile(dir,filename=filename))
+
+def connect_db(dir, filename = default_filename):
+    conn = sqlite3.connect(dbfile(dir,filename=filename))
+    conn.execute('pragma foreign_keys = on')
+    return conn
+      
 def create_db(conn):
     c = conn.cursor()
     
@@ -58,7 +72,14 @@ def create_db(conn):
     config_sha1 text
     )''')
 
+    c.execute('''CREATE TABLE settings (
+    settings_id int primary key CHECK( settings_id in (1) ) default 1,
+    current_config_id int null references config(config_id) default null,
+    last_changed_dt timestamp default CURRENT_TIMESTAMP
+    )''')
     # Save (commit) the changes
+    c.execute('insert into settings (settings_id) values (1)')
+    #
     conn.commit()
 
     # We can also close the connection if we are done with it.
