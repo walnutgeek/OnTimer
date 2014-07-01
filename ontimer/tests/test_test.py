@@ -3,7 +3,7 @@ import shutil
 import unittest
 
 from nose.tools import eq_
-from .. import OnExp, OnState
+from ontimer import OnExp, OnState
 import datetime
 from collections import defaultdict
 import sqlite3
@@ -37,14 +37,17 @@ class TestTest(unittest.TestCase):
                 loop = False
         eq_(len(dd),2000)
         eq_(len(ls)/len(dd),5)
+    
+    def create_testout(self):
+        test_dir = os.path.abspath("test-out")
+        if os.path.isdir(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        return test_dir
  
     def test_dbcreation(self):
-        from ..db import create_db, connect_db
-        dir = os.path.abspath("test-out")
-        if os.path.isdir(dir):
-            shutil.rmtree(dir)
-        os.mkdir(dir)
-        conn = connect_db(dir,filename="test.db")
+        from ontimer.db import create_db, connect_db
+        conn = connect_db(self.create_testout(),filename="test.db")
         eq_(1, list(conn.execute('pragma foreign_keys'))[0][0])
         create_db(conn)
         #raise Exception(os.path.abspath("."))
