@@ -86,5 +86,3 @@ def create_db(conn):
     # Just be sure any changes have been committed or they will be lost.
     conn.close()
     
-def load_config():
-     pass
