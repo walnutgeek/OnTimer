@@ -6,6 +6,7 @@ OnTimer - running stuff on time
 __version__ = '0.1'
 
 import datetime
+import pytz
 
 class Bounds:
   def __init__(self, lower, upper):
@@ -187,3 +188,25 @@ class OnExp:
     while len(cache[y]) == 0:
       y -= 1
     return y
+
+
+class OnTime:
+    def __init__(self, onexp, tz):
+        self.onexp = onexp if type(onexp) is OnExp else OnExp(onexp)
+        self.tz = tz if isinstance(tz,pytz.tzinfo.BaseTzInfo) else pytz.timezone(tz)
+
+    @staticmethod
+    def fromdict(d):
+        onexp = d.pop('onexp')
+        tz = d.pop('timezone')
+        if len(d) > 0:
+            raise ValueError("Not supported property: %s" % str(d))
+        return OnTime( onexp , tz )
+        
+    def state(self,dt):
+        return self.onexp.state(dt)
+    
+    def toUtc(self,state):
+        return  self.tz.localize(state.toDateTime()).astimezone(pytz.utc)
+        
+        

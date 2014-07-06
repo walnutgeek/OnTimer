@@ -5,6 +5,7 @@ Created on Jun 21, 2014
 '''
 from enum import Enum
 import yaml
+from . import OnTime
 
 class EventState(Enum):
     active = 1
@@ -25,8 +26,7 @@ class TaskState(Enum):
 class Config:
     def __init__(self,s):
         y = yaml.load(s)
-        eventTypeList = y.pop('events') 
-        self.events = [EventType(e) for e in eventTypeList]
+        self.events = [EventType(e) for e in y.pop('events') ]
         if len(y) > 0:
             raise ValueError("Not supported property: %s" % str(y))
         
@@ -34,23 +34,31 @@ class Config:
 class EventType:
     def __init__(self,y):
         self.name = str(y.pop('name'))
-        varsList = y.pop('vars') 
-        self.vars = [VarDef(v) for v in varsList ]
+        self.vars = [VarDef(v) for v in y.pop('vars')  ]
         generatorsList = y.pop('generators',None) #optional
-        self.generators = [ GenDef(g) for g in generatorsList] if generatorsList else []
-        tasksList = y.pop('tasks') 
-        self.tasks = [ TaskDef(t) for t in tasksList]
+        self.generators = [ GeneratorDef(g) for g in generatorsList] if generatorsList else []
+        self.tasks = [ TaskDef(t) for t in y.pop('tasks')]
         if len(y) > 0:
             raise ValueError("Not supported property: %s" % str(y))
 
 
 class VarDef:
     def __init__(self, v):
-        pass
+        self.name = str(v.pop('name'))
+        self.type = str(v.pop('type'))
+        if self.type == 'enum' :
+            self.elements = v.pop('elements')
+        if len(v) > 0:
+            raise ValueError("Not supported property: %s" % str(v))
 
-class GenDef:
-    def __init__(self, v):
-        pass
+class GeneratorDef:
+    def __init__(self, v): 
+        self.name = str(v.pop('name'))
+        self.on_time = OnTime.fromdict(v.pop('on_time') )
+        self.wait_final_stage = bool(v.pop('wait_final_stage'))
+        self.vals = v.pop('vals')
+        if len(v) > 0:
+            raise ValueError("Not supported property: %s" % str(v))
     
 class TaskDef:
     def __init__(self, v):
