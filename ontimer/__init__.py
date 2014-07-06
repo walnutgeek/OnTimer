@@ -19,7 +19,7 @@ class Bounds:
     return self.lower + (int(name) - self.lower) % self.dim
   def check(self, n):
       if n < self.lower or n > self.upper:
-           raise ValueError("n: %d is not between: %d and %d" % (n,self.lower,self.upper) )
+           raise ValueError("n: %d is not between: %d and %d" % (n, self.lower, self.upper))
 
   def parse(self, s):
     if s == '*' :
@@ -79,9 +79,9 @@ _YEAR = 4
 class OnState:
   def __init__(self, exp, refs):
     self.exp = exp
-    year=refs[_YEAR]
+    year = refs[_YEAR]
     self.upper_bounds = self.exp.fixed_upper_bounds + (len(self.exp.rules[_MONTH_DAY][year]),)
-    self.refs = tuple( self.upper_bounds[i]+x if x < 0 else x for i,x in enumerate(refs))
+    self.refs = tuple(self.upper_bounds[i] + x if x < 0 else x for i, x in enumerate(refs))
 
   def shift(self, compIdx, direction):
     toReset = tuple(self.upper_bounds[i] - 1 if direction == -1 else 0 for i in range(compIdx))
@@ -151,7 +151,7 @@ class OnExp:
             return v
         except OverflowError, e:
           import sys
-          raise OverflowError, OverflowError( str(e) + ' year=%d dt=%s' % (year,str(dt)) ), sys.exc_info()[2]
+          raise OverflowError, OverflowError(str(e) + ' year=%d dt=%s' % (year, str(dt))), sys.exc_info()[2]
       
     acc_rules[_MONTH_DAY] = month_day_cache()
     self.rules = tuple(acc_rules)
@@ -193,7 +193,7 @@ class OnExp:
 class OnTime:
     def __init__(self, onexp, tz):
         self.onexp = onexp if type(onexp) is OnExp else OnExp(onexp)
-        self.tz = tz if isinstance(tz,pytz.tzinfo.BaseTzInfo) else pytz.timezone(tz)
+        self.tz = tz if isinstance(tz, pytz.tzinfo.BaseTzInfo) else pytz.timezone(tz)
 
     @staticmethod
     def fromdict(d):
@@ -201,12 +201,12 @@ class OnTime:
         tz = d.pop('timezone')
         if len(d) > 0:
             raise ValueError("Not supported property: %s" % str(d))
-        return OnTime( onexp , tz )
+        return OnTime(onexp , tz)
         
-    def state(self,dt):
+    def state(self, dt):
         return self.onexp.state(dt)
     
-    def toUtc(self,state):
+    def toUtc(self, state):
         return  self.tz.localize(state.toDateTime()).astimezone(pytz.utc)
         
         
