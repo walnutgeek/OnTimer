@@ -4,6 +4,16 @@ from . import event
 
 default_filename = '.ontimer'
 
+class Dao:
+    def __init__(self, dir, filename = default_filename):
+        pass
+    
+    def get_config(self,config_id=None):
+        pass
+    
+    def set_config(self,config_text):
+        pass
+
 def dbfile(dir, filename = default_filename):
     return os.path.join(dir, filename)
 

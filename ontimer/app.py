@@ -1,11 +1,15 @@
+from __future__ import print_function
+
 from . import OnExp
+
 import datetime
 from tornado import websocket, web, ioloop
 import json
 import yaml
 import argparse
+import sys
 import os
-from .db import db_exists, connect_db
+from .db import db_exists, connect_db, Dao
 
 cl = []
 
@@ -47,34 +51,41 @@ app = web.Application([
     #(r'/(rest_api_example.png)', web.StaticFileHandler, {'path': './'}),
 ])
 
+def warning(*objs):
+    print("WARNING: ", *objs, file=sys.stderr)
 
 def main():
     root = None
     def check_root(args):
-        print 'root', 
+        print( 'root' ) 
         return db_exists(root)
     
     def set_conf(args):
-        print 'set_conf', args
+        print ( 'set_conf', args)
     
     def server(args):
         if not(db_exists(root)) or args.config :
             set_conf(args)
-        print 'server', args
+        print ('server', args)
 
     def get_conf(args):
-        print 'get_conf', args
+        if args.config:
+            raise ValueError('--config not supposed to be defined')
         
     parser = argparse.ArgumentParser(description='OnTimer - runs stuff on time')
     subparsers = parser.add_subparsers()
-    subparsers.add_parser('server',help='starts ontimer server').set_defaults(func=server)
-    subparsers.add_parser('get_conf',help='retrive most recent CONFIG out of ontimer db located in ROOT').set_defaults(func=get_conf)
-    subparsers.add_parser('set_conf',help='apply CONFIG to ontimer db located in the ROOT').set_defaults(func=set_conf)
+    subparsers.add_parser('server',help='starts ontimer server, if --config is defined load new config before start').set_defaults(func=server)
+    subparsers.add_parser('get_conf',help='retrive most recent CONFIG out of ontimer db and stdout it').set_defaults(func=get_conf)
+    subparsers.add_parser('set_conf',help='apply CONFIG to ontimer db').set_defaults(func=set_conf)
     parser.add_argument("--root", type=str, default='.', help='ontimer root dir to store db and artifacts. if not provided current directory will be used as default.')
     parser.add_argument("--config", type=str, help='config file to use. if not provided stdin/out will be used.')
     args = parser.parse_args()
     root = os.path.abspath(args.root)
-    args.func(args)
+    try:
+        args.func(args)
+    except ValueError, e:
+        warning(e)
+        parser.print_help()
 
 if __name__ == '__main__':
     main()    
