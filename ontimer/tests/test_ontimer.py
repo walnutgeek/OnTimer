@@ -13,6 +13,12 @@ def test_one_date():
     #rules = exp.rules[schepy._MONTH_DAY][2014]
     eq_(str(st), "2014-07-01 06:00:00")
 
+def test_timez_in_middle():
+    exp = OnExp("5,7 6 1,31 * tue,wed")
+    st = exp.state(datetime.datetime(2014,7,1,6,6,0))
+    #rules = exp.rules[schepy._MONTH_DAY][2014]
+    eq_(str(st), "2014-07-01 06:07:00")
+
 def test_all_dates():
     exp = OnExp("0 6 1,31 * tue,wed")
     s = exp.state(datetime.datetime(1000,1,1,0,0,0))
