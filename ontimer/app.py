@@ -9,7 +9,9 @@ import yaml
 import argparse
 import sys
 import os
-from .db import db_exists, connect_db, Dao
+from .db import Dao
+from . import event
+
 
 cl = []
 
@@ -55,22 +57,27 @@ def warning(*objs):
     print("WARNING: ", *objs, file=sys.stderr)
 
 def main():
-    root = None
-    def check_root(args):
-        print( 'root' ) 
-        return db_exists(root)
-    
+    dao = None
     def set_conf(args):
         print ( 'set_conf', args)
-    
+        if not(args.config):
+            raise ValueError("config has to be defined")
+        config_text=open("ontimer/tests/test-config.yaml","r").read()
+        event.Config(config_text)
+        dao.ensure_db()
+        dao.set_config(config_text)
+        
     def server(args):
-        if not(db_exists(root)) or args.config :
-            set_conf(args)
+        if not(dao.exists()) or args.config :
+            dao.set_conf(args)
         print ('server', args)
 
     def get_conf(args):
         if args.config:
             raise ValueError('--config not supposed to be defined')
+        if not(dao.exists()):
+            
+        
         
     parser = argparse.ArgumentParser(description='OnTimer - runs stuff on time')
     subparsers = parser.add_subparsers()
@@ -78,14 +85,15 @@ def main():
     subparsers.add_parser('get_conf',help='retrive most recent CONFIG out of ontimer db and stdout it').set_defaults(func=get_conf)
     subparsers.add_parser('set_conf',help='apply CONFIG to ontimer db').set_defaults(func=set_conf)
     parser.add_argument("--root", type=str, default='.', help='ontimer root dir to store db and artifacts. if not provided current directory will be used as default.')
-    parser.add_argument("--config", type=str, help='config file to use. if not provided stdin/out will be used.')
+    parser.add_argument("--config", type=str, help='config file to use.')
     args = parser.parse_args()
-    root = os.path.abspath(args.root)
+    dao=Dao( os.path.abspath(args.root) )
     try:
         args.func(args)
     except ValueError, e:
         warning(e)
         parser.print_help()
+        raise SystemExit(-1)
 
 if __name__ == '__main__':
     main()    

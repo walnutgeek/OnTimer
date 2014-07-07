@@ -18,6 +18,7 @@ class Bounds:
         
     def get_id(self, name): 
         return self.lower + (int(name) - self.lower) % self.dim
+    
     def check(self, n):
         if n < self.lower or n > self.upper:
             raise ValueError("n: %d is not between: %d and %d" % (n, self.lower, self.upper))

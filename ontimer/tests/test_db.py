@@ -18,10 +18,24 @@ if os.path.isdir(test_dir):
 os.mkdir(test_dir)
 
 def test_dbcreation():
-    from ontimer.db import create_db, connect_db
-    conn = connect_db(test_dir,filename="test.db")
-    eq_(1, list(conn.execute('pragma foreign_keys'))[0][0])
-    create_db(conn)
+    from ontimer.db import Dao
+    dao = Dao(test_dir,filename="test.db")
+    eq_(1, dao.query('pragma foreign_keys')[0][0])
+    dao.create_db()
+    eq_(1, len(dao.query('select * from settings')))
+    eq_(None,dao.get_config())
+    dao.set_config('hello')
+    eq_(1,dao.get_config()[0])
+    eq_('hello',dao.get_config()[2])
+    dao.set_config('hello')
+    eq_(1,dao.get_config()[0])
+    eq_('hello',dao.get_config()[2])
+    eq_('hello',dao.get_config()[2])
+    dao.set_config('hello2')
+    eq_(2,dao.get_config()[0])
+    eq_('hello2',dao.get_config()[2])
+    
+    
     #raise Exception(os.path.abspath("."))
 
 
