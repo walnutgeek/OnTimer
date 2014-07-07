@@ -40,14 +40,16 @@ class Dao:
         if not(cursor):
             cursor = conn.cursor()
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
-        if cursor.lastrowid:
-            r = [[cursor.lastrowid]]
         return r
     
-    @_conn_decorator
     def ensure_db(self):
         if not(self.exists()) :
             self.create_db()
+        else:
+            try:
+                self.query('select * from settings')
+            except:
+                self.create_db()
         
     @_conn_decorator
     def set_config(self,config_text,conn=None):
@@ -55,10 +57,10 @@ class Dao:
         sha1 = hashlib.sha1(config_text).hexdigest()
         if not(r) or r[3] != sha1:
             cursor = conn.cursor()
-            lastid = self.query("insert into config (uploaded_dt,config_text,config_sha1) values (CURRENT_TIMESTAMP,?,?)",(config_text,sha1),cursor = cursor,conn=conn)
+            self.query("insert into config (uploaded_dt,config_text,config_sha1) values (CURRENT_TIMESTAMP,?,?)",(config_text,sha1),cursor = cursor,conn=conn)
+            self.query("update settings set current_config_id = ?, last_changed_dt=CURRENT_TIMESTAMP",(cursor.lastrowid,),cursor = cursor,conn=conn)
             conn.commit()
-            self.query("update settings set current_config_id = ?",(lastid[0][0],),cursor = cursor,conn=conn)
-            conn.commit()
+            
     @_conn_decorator
     def get_config(self,config_id=None,conn=None):
         if not(config_id):

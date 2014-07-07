@@ -59,14 +59,13 @@ def warning(*objs):
 def main():
     dao = None
     def set_conf(args):
-        print ( 'set_conf', args)
         if not(args.config):
             raise ValueError("config has to be defined")
-        config_text=open("ontimer/tests/test-config.yaml","r").read()
+        config_text=open(args.config,"r").read()
         event.Config(config_text)
         dao.ensure_db()
         dao.set_config(config_text)
-        
+        print ('Loaded ' + args.config)
     def server(args):
         if not(dao.exists()) or args.config :
             dao.set_conf(args)
@@ -76,8 +75,8 @@ def main():
         if args.config:
             raise ValueError('--config not supposed to be defined')
         if not(dao.exists()):
-            
-        
+            raise ValueError('db does not exists at --root location')
+        print(dao.get_config()[2])
         
     parser = argparse.ArgumentParser(description='OnTimer - runs stuff on time')
     subparsers = parser.add_subparsers()

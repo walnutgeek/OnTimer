@@ -1,0 +1,26 @@
+events:
+  - name: price
+    vars: 
+      - name: region
+        type: enum # str, int, float, datetime, enum
+        elements: [ us, eu, asia ]
+      - name: time
+        type: datetime
+    generator:
+      - name: us
+        on_time: 
+          timezone: US/Pacific
+          onexp: 0 14 * * MON-FRI
+        vals: 
+          - us
+          - eval: dt 
+        wait_final_stage: true
+    tasks:
+      - name: download_prices
+        type: ProcessRunner #ontimer.runner.ProcessRunner
+        cmd: runipy {ipy_path}/HistoricalPrices.ipynb --html HistoricalPrices.html 
+      - name: calculate_returns
+        type: ProcessRunner #ontimer.runner.ProcessRunner
+        depends_on: [ download_prices ]
+        cmd: runipy {ipy_path}/HistoricalReturns.ipynb --html HistoricalReturns.html 
+             
