@@ -30,11 +30,11 @@ def test_dbcreation():
     dao.set_config(c1_text)
     eq_(1,dao.get_config()[0])
     eq_(c1_text,dao.get_config()[2])
-    dao.parse_config()
+    dao.apply_config()
     dao.set_config(c2_text)
     eq_(2,dao.get_config()[0])
     eq_(c2_text,dao.get_config()[2])
-    dao.parse_config()
+    dao.apply_config()
     
     
     #raise Exception(os.path.abspath("."))

@@ -63,7 +63,7 @@ class Dao:
             conn.commit()
 
     @_conn_decorator
-    def parse_config(self,conn=None):
+    def apply_config(self,conn=None):
         r = self.get_config(conn=conn)
         config = event.Config(r[2])
         config.config_id = r[0]
@@ -79,42 +79,26 @@ class Dao:
             else:
                 self.query("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id),cursor = cursor,conn=conn)
                 event_type.event_type_id = cursor.lastrowid
-            for generator in config.events:
-                r = self.query("select generator_id, last_seen_in_config_id from generator where generator_name = ? and event_type_id = ?",(generator.name,event_type.event_type_id),cursor = cursor,conn=conn)
-                if len(r) > 1 :
-                    raise ValueError('duplicate for event_name: %s' % generator.name)
-                elif len(r) == 1:
-                    generator.generator_id = r[0][0]
-                    if r[0][1] != config.config_id:
-                        self.query("update generator set last_seen_in_config_id = ? where  generator_id = ?",(config.config_id,generator.generator_id),cursor = cursor,conn=conn)
-                else:
-                    self.query("insert into generator (generator_name,event_type_id,last_seen_in_config_id) values (?,?,?)",(generator.name,event_type.event_type_id,config.config_id),cursor = cursor,conn=conn)
-                    generator.generator_id = cursor.lastrowid
-            for task in config.events:
-                r = self.query("select task_id, last_seen_in_config_id from task where task_name = ? and event_type_id = ?",(task.name,event_type.event_type_id),cursor = cursor,conn=conn)
-                if len(r) > 1 :
-                    raise ValueError('duplicate for event_name: %s' % task.name)
-                elif len(r) == 1:
-                    task.task_id = r[0][0]
-                    if r[0][1] != config.config_id:
-                        self.query("update task set last_seen_in_config_id = ? where  task_id = ?",(config.config_id,task.task_id),cursor = cursor,conn=conn)
-                else:
-                    self.query("insert into task (task_name,event_type_id,last_seen_in_config_id) values (?,?,?)",(task.name,event_type.event_type_id,config.config_id),cursor = cursor,conn=conn)
-                    task.task_id = cursor.lastrowid
             
-#             for event_type in config.events:
-#                 r = self.query("select event_type_id, last_seen_in_config_id from event_type where event_name = ?",(event_type.name,),cursor = cursor,conn=conn)
-#                 if len(r) > 1 :
-#                     raise ValueError('duplicate for event_name: %s' % event_type.name)
-#                 elif len(r) == 1:
-#                     event_type.event_type_id = r[0][0]
-#                     if r[0][1] != config.config_id:
-#                         self.query("update event_type set last_seen_in_config_id = ? where  event_type_id = ?",(config.config_id,event_type.event_type_id),cursor = cursor,conn=conn)
-#                 else:
-#                     self.query("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id),cursor = cursor,conn=conn)
-#                     event_type.event_type_id = cursor.lastrowid
+            def update_ids(obj_list,name,event_type_id,config_id):
+                for obj in obj_list:
+                    obj_id = None
+                    r = self.query("select {0}_id, last_seen_in_config_id from {0} where {0}_name = ? and event_type_id = ?".format(name),(obj.name,event_type_id),cursor = cursor,conn=conn)
+                    if len(r) > 1 :
+                        raise ValueError('duplicate %s: %s' % name, obj.name)
+                    elif len(r) == 1:
+                        obj_id = r[0][0]
+                        if r[0][1] != config.config_id:
+                            self.query("update {0} set last_seen_in_config_id = ? where  {0}_id = ?".format(name),(config_id,obj_id),cursor = cursor,conn=conn)
+                    else:
+                        self.query("insert into {0} ({0}_name,event_type_id,last_seen_in_config_id) values (?,?,?)".format(name),(obj.name,event_type_id,config_id),cursor = cursor,conn=conn)
+                        obj_id = cursor.lastrowid
+                    setattr(obj,'%s_id' % name, obj_id)
+                    
+            update_ids(event_type.generators,'generator',event_type.event_type_id, config.config_id)
+            update_ids(event_type.tasks,'task',event_type.event_type_id, config.config_id)
             
-            conn.commit()
+        conn.commit()
         return config
             
     @_conn_decorator
