@@ -62,10 +62,10 @@ def main():
         if not(args.config):
             raise ValueError("config has to be defined")
         config_text=open(args.config,"r").read()
-        event.Config(config_text)
         dao.ensure_db()
         dao.set_config(config_text)
         print ('Loaded ' + args.config)
+        
     def server(args):
         if not(dao.exists()) or args.config :
             dao.set_conf(args)

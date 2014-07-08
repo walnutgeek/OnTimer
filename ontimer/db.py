@@ -35,13 +35,6 @@ class Dao:
         conn.execute('pragma foreign_keys = on')
         return conn
     
-    @_conn_decorator
-    def query(self, q, params=None, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
-        r = list(cursor.execute(q,params) if params else cursor.execute(q))
-        return r
-    
     def ensure_db(self):
         if not(self.exists()) :
             self.create_db()
@@ -50,9 +43,17 @@ class Dao:
                 self.query('select * from settings')
             except:
                 self.create_db()
+
+    @_conn_decorator
+    def query(self, q, params=None, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        r = list(cursor.execute(q,params) if params else cursor.execute(q))
+        return r
         
     @_conn_decorator
     def set_config(self,config_text,conn=None):
+        event.Config(config_text)
         r = self.get_config(conn=conn)
         sha1 = hashlib.sha1(config_text).hexdigest()
         if not(r) or r[3] != sha1:
@@ -60,6 +61,61 @@ class Dao:
             self.query("insert into config (uploaded_dt,config_text,config_sha1) values (CURRENT_TIMESTAMP,?,?)",(config_text,sha1),cursor = cursor,conn=conn)
             self.query("update settings set current_config_id = ?, last_changed_dt=CURRENT_TIMESTAMP",(cursor.lastrowid,),cursor = cursor,conn=conn)
             conn.commit()
+
+    @_conn_decorator
+    def parse_config(self,conn=None):
+        r = self.get_config(conn=conn)
+        config = event.Config(r[2])
+        config.config_id = r[0]
+        cursor = conn.cursor()
+        for event_type in config.events:
+            r = self.query("select event_type_id, last_seen_in_config_id from event_type where event_name = ?",(event_type.name,),cursor = cursor,conn=conn)
+            if len(r) > 1 :
+                raise ValueError('duplicate for event_name: %s' % event_type.name)
+            elif len(r) == 1:
+                event_type.event_type_id = r[0][0]
+                if r[0][1] != config.config_id:
+                    self.query("update event_type set last_seen_in_config_id = ? where  event_type_id = ?",(config.config_id,event_type.event_type_id),cursor = cursor,conn=conn)
+            else:
+                self.query("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id),cursor = cursor,conn=conn)
+                event_type.event_type_id = cursor.lastrowid
+            for generator in config.events:
+                r = self.query("select generator_id, last_seen_in_config_id from generator where generator_name = ? and event_type_id = ?",(generator.name,event_type.event_type_id),cursor = cursor,conn=conn)
+                if len(r) > 1 :
+                    raise ValueError('duplicate for event_name: %s' % generator.name)
+                elif len(r) == 1:
+                    generator.generator_id = r[0][0]
+                    if r[0][1] != config.config_id:
+                        self.query("update generator set last_seen_in_config_id = ? where  generator_id = ?",(config.config_id,generator.generator_id),cursor = cursor,conn=conn)
+                else:
+                    self.query("insert into generator (generator_name,event_type_id,last_seen_in_config_id) values (?,?,?)",(generator.name,event_type.event_type_id,config.config_id),cursor = cursor,conn=conn)
+                    generator.generator_id = cursor.lastrowid
+            for task in config.events:
+                r = self.query("select task_id, last_seen_in_config_id from task where task_name = ? and event_type_id = ?",(task.name,event_type.event_type_id),cursor = cursor,conn=conn)
+                if len(r) > 1 :
+                    raise ValueError('duplicate for event_name: %s' % task.name)
+                elif len(r) == 1:
+                    task.task_id = r[0][0]
+                    if r[0][1] != config.config_id:
+                        self.query("update task set last_seen_in_config_id = ? where  task_id = ?",(config.config_id,task.task_id),cursor = cursor,conn=conn)
+                else:
+                    self.query("insert into task (task_name,event_type_id,last_seen_in_config_id) values (?,?,?)",(task.name,event_type.event_type_id,config.config_id),cursor = cursor,conn=conn)
+                    task.task_id = cursor.lastrowid
+            
+#             for event_type in config.events:
+#                 r = self.query("select event_type_id, last_seen_in_config_id from event_type where event_name = ?",(event_type.name,),cursor = cursor,conn=conn)
+#                 if len(r) > 1 :
+#                     raise ValueError('duplicate for event_name: %s' % event_type.name)
+#                 elif len(r) == 1:
+#                     event_type.event_type_id = r[0][0]
+#                     if r[0][1] != config.config_id:
+#                         self.query("update event_type set last_seen_in_config_id = ? where  event_type_id = ?",(config.config_id,event_type.event_type_id),cursor = cursor,conn=conn)
+#                 else:
+#                     self.query("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id),cursor = cursor,conn=conn)
+#                     event_type.event_type_id = cursor.lastrowid
+            
+            conn.commit()
+        return config
             
     @_conn_decorator
     def get_config(self,config_id=None,conn=None):
@@ -67,7 +123,7 @@ class Dao:
             config_id = self.query('select current_config_id from settings', conn=conn)[0][0]
             if not(config_id):
                 return None
-        return self.query('select * from config where config_id = ?', (config_id,), conn=conn)[0]
+        return self.query('select config_id,uploaded_dt,config_text,config_sha1 from config where config_id = ?', (config_id,), conn=conn)[0]
 
     @_conn_decorator
     def create_db(self, conn=None):
@@ -75,25 +131,26 @@ class Dao:
         
         c.execute('''CREATE TABLE event_type (
         event_type_id INTEGER primary key,
-        event_name text, 
+        event_name TEXT, 
         last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
         c.execute('''CREATE TABLE event (
         event_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
-        event_string text, 
+        event_string TEXT, 
         event_state INTEGER CHECK( event_state IN (%s) ) NOT NULL DEFAULT 1,
         generator_id INTEGER references generator(generator_id),
-        started_dt timestamp not null,
-        finished_dt timestamp not null,
-        eta_dt timestamp null default null
+        started_dt TIMESTAMP not null,
+        finished_dt TIMESTAMP not null,
+        eta_dt TIMESTAMP null default null
         )''' % ','.join( str(s.value) for s in event.EventState) )
     
         c.execute('''CREATE TABLE task (
         task_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
-        task_name text
+        task_name TEXT,
+        last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
         c.execute('''CREATE TABLE event_task (
@@ -101,36 +158,37 @@ class Dao:
         event_id INTEGER references event(event_id),
         task_id INTEGER references task(task_id),
         task_state INTEGER CHECK( task_state IN (%s) ) NOT NULL DEFAULT 1,
-        run_at_dt timestamp not null
+        run_at_dt TIMESTAMP not null
         )'''% ','.join(  str(s.value) for s in event.TaskState ) )
         
         c.execute('''CREATE TABLE event_task_artifact (
         artifact_id INTEGER primary key,
         event_task_id INTEGER references event_task(event_task_id),
-        name text,
-        value text,
-        stored_dt timestamp
+        name TEXT,
+        value TEXT,
+        stored_dt TIMESTAMP
         )''')
         
         c.execute('''CREATE TABLE generator (
         generator_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
-        generator_name text, 
+        generator_name TEXT, 
         prev_event_id INTEGER null references event(event_id) ,
-        current_event_id INTEGER null references event(event_id)
+        current_event_id INTEGER null references event(event_id),
+        last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
         c.execute('''CREATE TABLE config (
         config_id INTEGER primary key,
-        uploaded_dt timestamp,
-        config_text text,
-        config_sha1 text
+        uploaded_dt TIMESTAMP,
+        config_text TEXT,
+        config_sha1 TEXT
         )''')
     
         c.execute('''CREATE TABLE settings (
         settings_id INTEGER primary key CHECK( settings_id in (1) ) default 1,
         current_config_id INTEGER null references config(config_id) default null,
-        last_changed_dt timestamp default CURRENT_TIMESTAMP
+        last_changed_dt TIMESTAMP default CURRENT_TIMESTAMP
         )''')
         # Save (commit) the changes
         c.execute('insert into settings (settings_id) values (1)')
