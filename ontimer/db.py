@@ -123,12 +123,12 @@ class Dao:
         event_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         event_string TEXT, 
-        event_state INTEGER CHECK( event_state IN (%s) ) NOT NULL DEFAULT 1,
+        event_status INTEGER CHECK( event_status IN (%s) ) NOT NULL DEFAULT 1,
         generator_id INTEGER references generator(generator_id),
         started_dt TIMESTAMP not null,
         finished_dt TIMESTAMP not null,
         eta_dt TIMESTAMP null default null
-        )''' % ','.join( str(s.value) for s in event.EventState) )
+        )''' % ','.join( str(s.value) for s in event.EventStatus) )
     
         c.execute('''CREATE TABLE task (
         task_id INTEGER primary key,
@@ -141,9 +141,10 @@ class Dao:
         event_task_id INTEGER primary key,
         event_id INTEGER references event(event_id),
         task_id INTEGER references task(task_id),
-        task_state INTEGER CHECK( task_state IN (%s) ) NOT NULL DEFAULT 1,
+        task_state TEXT,
+        task_status INTEGER CHECK( task_status IN (%s) ) NOT NULL DEFAULT 1,
         run_at_dt TIMESTAMP not null
-        )'''% ','.join(  str(s.value) for s in event.TaskState ) )
+        )'''% ','.join(  str(s.value) for s in event.TaskStatus ) )
         
         c.execute('''CREATE TABLE event_task_artifact (
         artifact_id INTEGER primary key,
