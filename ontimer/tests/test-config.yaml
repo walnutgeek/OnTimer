@@ -2,10 +2,9 @@ events:
   - name: price
     vars: 
       - name: region
-        type: enum # str, int, float, datetime, enum
-        elements: [ us, eu, asia ]
+        type: STR 
       - name: time
-        type: datetime
+        type: DATETIME
     generators:
       - name: us
         on_time: 

@@ -5,8 +5,10 @@ Created on Jun 21, 2014
 '''
 from enum import Enum
 import yaml
-import datetime
 from . import OnTime
+from . import utils
+import datetime
+
 
 class EventStatus(Enum):
     active = 1
@@ -23,37 +25,22 @@ class TaskStatus(Enum):
     success = 11
     skip = 12
     fail = 101
-    
-def _toSTR(s):
-    return s
-
-def _toINT(s):
-    return int(s)
-
-def _toFLOAT(s):
-    return 
-    
-def _toDATETIME(s):
-    formats = ['%Y-%m-%d %H:%M:%S','%Y%m%d-%H%M%S','%Y%m%d%H%M%S','%Y-%m-%d','%Y%m%d']
-    for f in formats:
-        try:
-            return datetime.datetime.strptime(s, f)
-        except:
-            pass
-    raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
-
 
 class VarTypes(Enum):
-    STR = (lambda s: s),
-    INT = (lambda s: int(s)),
-    FLOAT = (lambda s: float(s)),
-    DATETIME = (_toDATETIME),
+    STR = (lambda s: s,      
+           lambda s: str(s))
+    INT = (lambda s: int(s), 
+           lambda i: str(i))
+    FLOAT = (lambda s: float(s), 
+             lambda f: str(f))
+    DATETIME = (lambda s: utils.toDateTime(s,utils.all_formats),
+                lambda dt: dt.strptime(utils.format_Y_m_d_H_M_S))
     
-    def __init__(self,toV):
-        self.toV = toV
-        
     def toValue(self, s):
-        return self.toV(s)
+        return None if s is None else self.value[0](s)
+
+    def toStr(self, v):
+        return None if v is None else self.value[1](v) 
 
 class Config:
     def __init__(self,s):
@@ -81,18 +68,16 @@ class EventType:
 class VarDef:
     def __init__(self, v):
         self.name = str(v.pop('name'))
-        self.type = str(v.pop('type'))
+        self.type = getattr(VarTypes,str(v.pop('type')))
         if self.type == 'enum' :
             self.elements = v.pop('elements')
         if len(v) > 0:
             raise ValueError("Not supported property: %s" % str(v))
 
     def toValue(self,s):
-        pass
-        
-        
-        
+        return self.type.toValue(s)
 
+        
 class GeneratorDef:
     def __init__(self, v): 
         self.name = str(v.pop('name'))
@@ -138,11 +123,9 @@ class Event:
     @staticmethod
     def fromstring(config,s):
         split = splitEventString(s)
-        type = config.getTypeByName(split.pop(0))
-        if len(type.vars) != len(split):
+        event_type = config.getTypeByName(split.pop(0))
+        if len(event_type.vars) != len(split):
             raise ValueError("event vars %s doesn't match config.vars %s requirements" % (s,str(vars)))
-        return Event(type,[type.vars[i].toValue(v) for i,v in enumerate(split)])
-        
-
+        return Event(event_type,[type.vars[i].toValue(v) for i,v in enumerate(split)])
         
         
