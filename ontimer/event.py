@@ -34,7 +34,7 @@ class VarTypes(Enum):
     FLOAT = (lambda s: float(s), 
              lambda f: str(f))
     DATETIME = (lambda s: utils.toDateTime(s,utils.all_formats),
-                lambda dt: dt.strptime(utils.format_Y_m_d_H_M_S))
+                lambda dt: dt.strftime(utils.format_Y_m_d_H_M_S))
     
     def toValue(self, s):
         return None if s is None else self.value[0](s)
@@ -68,14 +68,15 @@ class EventType:
 class VarDef:
     def __init__(self, v):
         self.name = str(v.pop('name'))
-        self.type = getattr(VarTypes,str(v.pop('type')))
-        if self.type == 'enum' :
-            self.elements = v.pop('elements')
+        self.type = VarTypes[str(v.pop('type'))]
         if len(v) > 0:
             raise ValueError("Not supported property: %s" % str(v))
 
     def toValue(self,s):
         return self.type.toValue(s)
+
+    def toStr(self,v):
+        return self.type.toStr(v)
 
         
 class GeneratorDef:
@@ -115,6 +116,9 @@ def splitEventString(s):
         parts[lastpart] += c
     return parts
 
+def joinEventString(it):
+    return ','.join((s.replace('\\','\\\\').replace(',','\\,') for s in it))
+
 class Event:
     def __init__(self, event_type,data_tuple):
         self.type = event_type
@@ -126,6 +130,8 @@ class Event:
         event_type = config.getTypeByName(split.pop(0))
         if len(event_type.vars) != len(split):
             raise ValueError("event vars %s doesn't match config.vars %s requirements" % (s,str(vars)))
-        return Event(event_type,[type.vars[i].toValue(v) for i,v in enumerate(split)])
+        return Event(event_type,[event_type.vars[i].toValue(v) for i,v in enumerate(split)])
         
+    def __str__(self):
+        return joinEventString( [self.type.name] + [self.type.vars[i].toStr(v) for i,v in enumerate(self.data)] )
         
