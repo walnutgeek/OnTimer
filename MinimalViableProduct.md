@@ -36,6 +36,8 @@ If you choose to define ``begin`` and ``eta`` they cannot have any dependencies 
 states in task flow. Contrary ``complete`` can define dependencies and it may be desired if we want 
 mark event completed earlier then all tasks in main flow completed successfully. ``complete`` cannot 
 depend on ETA flow tasks.
+
+
  
 ### Generators
 

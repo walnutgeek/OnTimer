@@ -21,5 +21,6 @@ events:
       - name: calculate_returns
         type: ProcessRunner #ontimer.runner.ProcessRunner
         depends_on: [ download_prices ]
-        cmd: runipy {ipy_path}/HistoricalReturns.ipynb --html HistoricalReturns.html 
-             
+        cmd: runipy {ipy_path}/HistoricalReturns.ipynb --html HistoricalReturns.html
+ 
+                

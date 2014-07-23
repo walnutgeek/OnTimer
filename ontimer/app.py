@@ -1,61 +1,16 @@
 from __future__ import print_function
 
-from . import OnExp
-
-import datetime
-from tornado import websocket, web, ioloop
-import json
-import yaml
 import argparse
 import sys
 import os
 from .db import Dao
-from . import event
+from . import server
 
 
-cl = []
-
-class IndexHandler(web.RequestHandler):
-    def get(self):
-        self.render("web/index.html")
-
-class SocketHandler(websocket.WebSocketHandler):
-
-    def open(self):
-        if self not in cl:
-            cl.append(self)
-
-    def on_close(self):
-        if self in cl:
-            cl.remove(self)
-
-class ApiHandler(web.RequestHandler):
-
-    @web.asynchronous
-    def get(self, *args):
-        self.finish()
-        id = self.get_argument("id")
-        value = self.get_argument("value")
-        data = {"id": id, "value" : value}
-        data = json.dumps(data)
-        for c in cl:
-            c.write_message(data)
-
-    @web.asynchronous
-    def post(self):
-        pass
-
-app = web.Application([
-    (r'/', IndexHandler),
-    (r'/ws', SocketHandler),
-    (r'/api', ApiHandler),
-    (r'/(favicon.ico)', web.StaticFileHandler, {'path': '../'}),
-    #(r'/(rest_api_example.png)', web.StaticFileHandler, {'path': './'}),
-])
 
 def warning(*objs):
     print("WARNING: ", *objs, file=sys.stderr)
-
+    
 def main():
     dao = None
     def set_conf(args):
@@ -66,10 +21,11 @@ def main():
         dao.set_config(config_text)
         print ('Loaded ' + args.config)
         
-    def server(args):
+    def run_server(args):
         if not(dao.exists()) or args.config :
-            dao.set_conf(args)
+            set_conf(args)
         print ('server', args)
+        server.run_server(dao)
 
     def get_conf(args):
         if args.config:
@@ -96,14 +52,3 @@ def main():
 
 if __name__ == '__main__':
     main()    
-#     app.listen(8899)
-#     def callback():
-#       print "dt=%s" %( datetime.datetime.now() )
-#  
-#     #milliseconds
-#     interval_ms = 5 * 1000
-#     main_loop = ioloop.IOLoop.instance()
-#     scheduler = ioloop.PeriodicCallback(callback,interval_ms, io_loop = main_loop)
-#     #start your period timer
-#     scheduler.start()
-#     main_loop.start()
