@@ -50,6 +50,33 @@ class Dao:
             cursor = conn.cursor()
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
         return r
+
+    @_conn_decorator
+    def emit_event(self, event, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        self.query('''insert into event 
+            (event_type_id,event_string,event_status,generator_id,started_dt,eta_dt) 
+            values (?, ?, ?, ?, ?, ?)''', 
+            (event.type.event_type_id,str(event),event.status.value,event.generator_id(),event.started_dt,event.eta_dt), cursor=cursor, conn=conn)
+        event.event_id = cursor.lastrowid
+        task_dict = {}
+        for t in event.tasks() :
+            task_dict[t.task_name()]=t
+            self.query('''insert into event_task 
+                (event_id, task_id, task_state, task_status, run_at_dt) 
+                values (?, ?, ?, ?, ?)''', 
+                (event.event_id,t.task_id(),t.state(),t.status.value,t.run_at_dt), cursor=cursor, conn=conn)
+            t.event_task_id =  cursor.lastrowid
+        for t in event.tasks() :
+            if t.task.depends_on :
+                for upstream in t.task.depends_on :
+                    self.query('''insert into event_task_prereq 
+                                (before_id, after_id) 
+                                values (?, ?)''', 
+                                (task_dict[upstream].event_task_id, t.event_task_id), cursor=cursor, conn=conn)
+        conn.commit()
+        return event
         
     @_conn_decorator
     def set_config(self,config_text,conn=None):
@@ -123,11 +150,11 @@ class Dao:
         event_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         event_string TEXT, 
-        event_status INTEGER CHECK( event_status IN (%s) ) NOT NULL DEFAULT 1,
+        event_status INTEGER CHECK( event_status IN (%s) ) NOT NULL,
         generator_id INTEGER references generator(generator_id),
         started_dt TIMESTAMP not null,
-        finished_dt TIMESTAMP not null,
-        eta_dt TIMESTAMP null default null
+        finished_dt TIMESTAMP ,
+        eta_dt TIMESTAMP 
         )''' % ','.join( str(s.value) for s in event.EventStatus) )
     
         c.execute('''CREATE TABLE task (
@@ -145,13 +172,26 @@ class Dao:
         task_status INTEGER CHECK( task_status IN (%s) ) NOT NULL DEFAULT 1,
         run_at_dt TIMESTAMP not null
         )'''% ','.join(  str(s.value) for s in event.TaskStatus ) )
+   
+        c.execute('''CREATE TABLE event_task_prereq (
+        prereq_id INTEGER primary key,
+        before_id INTEGER references event_task(event_task_id ),
+        after_id INTEGER references event_task(event_task_id )
+        )''' )
         
-        c.execute('''CREATE TABLE event_task_artifact (
+        c.execute('''CREATE TABLE artifact (
         artifact_id INTEGER primary key,
         event_task_id INTEGER references event_task(event_task_id),
         name TEXT,
         value TEXT,
         stored_dt TIMESTAMP
+        )''')
+        
+        c.execute('''CREATE TABLE artifact_state (
+        artifact_state_id INTEGER primary key,
+        artifact_id INTEGER references artifact(artifact_id),
+        value INTEGER,
+        updated_dt TIMESTAMP
         )''')
         
         c.execute('''CREATE TABLE generator (

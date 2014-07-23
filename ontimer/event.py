@@ -5,10 +5,12 @@ Created on Jun 21, 2014
 '''
 from enum import Enum
 import yaml
+import json
 from . import OnTime
 from . import utils
 import datetime
 
+global_config={}
 
 class EventStatus(Enum):
     active = 1
@@ -120,9 +122,13 @@ def joinEventString(it):
     return ','.join((s.replace('\\','\\\\').replace(',','\\,') for s in it))
 
 class Event:
-    def __init__(self, event_type,data_tuple):
+    def __init__(self, event_type,data_tuple, generator=None, started_dt=datetime.datetime.utcnow(), eta_dt=None):
         self.type = event_type
         self.data = data_tuple
+        self.generator = generator
+        self.started_dt = started_dt
+        self.eta_dt = eta_dt
+        self.event_tasks = None
 
     @staticmethod
     def fromstring(config,s):
@@ -134,4 +140,33 @@ class Event:
         
     def __str__(self):
         return joinEventString( [self.type.name] + [self.type.vars[i].toStr(v) for i,v in enumerate(self.data)] )
+
+    def __repr__(self): return self.__str__()
+    def generator_id(self): return self.generator.generator_id if self.generator else None
+    
+    def tasks(self):
+        if self.event_tasks == None:
+            self.event_tasks = [EventTask(self,t) for t in self.type.tasks]
+        return self.event_tasks
+    
+    def var_dict(self):
+        return dict( ( (vd.name, self.data[i]) for i, vd in enumerate(self.type.vars) ) )
+    
+class EventTask:
+    def __init__(self,event,task,run_at_dt=datetime.datetime.utcnow()):
+        self.event = event
+        self.task = task
+        self.status = TaskStatus.scheduled
+        self.run_at_dt = run_at_dt
+        
+    def task_id(self):return self.task.task_id
+    def task_name(self):return self.task.name
+    def _format_vars(self):
+        format_vars=dict(global_config)
+        format_vars.update(self.event.var_dict())
+        #TODO format_vars.update(self.file_dict())
+        return format_vars
+        
+    def cmd(self): return self.task.cmd.format(**self._format_vars())
+    def state(self): return  json.dumps({'cmd':self.cmd()} )
         

@@ -17,11 +17,12 @@ os.mkdir(test_dir)
 c1_text = open("ontimer/tests/test-config.yaml","r").read()
 c2_text = open("ontimer/tests/test-config-v2.yaml","r").read()
 
+from ontimer.db import Dao
+dao = Dao(test_dir,filename="test.db")
+eq_(1, dao.query('pragma foreign_keys')[0][0])
+dao.create_db()
+
 def test_dbcreation():
-    from ontimer.db import Dao
-    dao = Dao(test_dir,filename="test.db")
-    eq_(1, dao.query('pragma foreign_keys')[0][0])
-    dao.create_db()
     eq_(1, len(dao.query('select * from settings')))
     eq_(None,dao.get_config())
     dao.set_config(c1_text)
@@ -37,6 +38,12 @@ def test_dbcreation():
     dao.apply_config()
     
     
-    #raise Exception(os.path.abspath("."))
-
+def test_emit():
+    conf = dao.apply_config()
+    ev = event.Event.fromstring(conf,"price,us,20140713")
+    ev.status=event.EventStatus.active
+    event.global_config.update( ipy_path = '/Users/sergeyk/ipyhome')
+    dao.emit_event(ev)
+    
+    
 

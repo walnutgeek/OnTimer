@@ -27,4 +27,5 @@ def test_Event_obj():
     conf = event.Config(open("ontimer/tests/test-config.yaml","r").read())
     e=event.Event.fromstring(conf,"price,us,20140713")
     eq_("price,us,2014-07-13 00:00:00",str(e))
+    tasks = e.tasks()
 
