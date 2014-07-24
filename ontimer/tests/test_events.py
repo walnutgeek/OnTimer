@@ -28,4 +28,10 @@ def test_Event_obj():
     e=event.Event.fromstring(conf,"price,us,20140713")
     eq_("price,us,2014-07-13 00:00:00",str(e))
     tasks = e.tasks()
+    eq_(2,len(tasks))
+
+def test_joinEnumsIndices():
+    eq_("1,2,3,11,101,102",event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all))
+    eq_("11,101,102",event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all))
+    eq_(event.TaskStatus.success,event.RunOutcome.success)
 

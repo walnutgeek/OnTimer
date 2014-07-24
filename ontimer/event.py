@@ -3,7 +3,7 @@ Created on Jun 21, 2014
 
 @author: sergeyk
 '''
-from enum import Enum
+from enum import IntEnum,Enum
 import yaml
 import json
 from . import OnTime
@@ -12,22 +12,39 @@ import datetime
 
 global_config={}
 
-class EventStatus(Enum):
+def joinEnumsIndices(e,meta): return ','.join( str(v.value) for v in e if v.isMetaStatus(meta) )
+
+class MetaStates(IntEnum):
+    all = 0
+    final = 1
+    active = 2
+    
+class EventStatus(IntEnum):
     active = 1
     eta_breach = 2 
-    success = 3
-    skip = 4
-    paused = 5
-    fail = 101
-
-class TaskStatus(Enum):
+    fail = 3
+    paused = 11
+    success = 101
+    skip = 102
+    
+    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
+    
+class TaskStatus(IntEnum):
     scheduled = 1
     running = 2
     retry = 3
-    success = 11
-    skip = 12
-    fail = 101
+    fail = 11
+    success = 101
+    skip = 102
 
+    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
+    
+class RunOutcome(IntEnum):
+    fail = 11
+    success = 101
+    skip = 102
+
+    def isMetaStatus(self,meta): return [True,True,False ][meta]
 class VarTypes(Enum):
     STR = (lambda s: s,      
            lambda s: str(s))

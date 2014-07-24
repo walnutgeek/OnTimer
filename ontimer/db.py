@@ -51,6 +51,15 @@ class Dao:
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
         return r
 
+#     @_conn_decorator
+#     def get_active_events(self, event, conn=None):
+#         cursor = conn.cursor()
+#         self.query('''insert into event 
+#             (event_type_id,event_string,event_status,generator_id,started_dt,eta_dt) 
+#             values (?, ?, ?, ?, ?, ?)''', 
+#             (event.type.event_type_id,st
+#         
+
     @_conn_decorator
     def emit_event(self, event, cursor=None, conn=None):
         if not(cursor):
@@ -155,7 +164,7 @@ class Dao:
         started_dt TIMESTAMP not null,
         finished_dt TIMESTAMP ,
         eta_dt TIMESTAMP 
-        )''' % ','.join( str(s.value) for s in event.EventStatus) )
+        )''' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.all) )
     
         c.execute('''CREATE TABLE task (
         task_id INTEGER primary key,
@@ -170,8 +179,11 @@ class Dao:
         task_id INTEGER references task(task_id),
         task_state TEXT,
         task_status INTEGER CHECK( task_status IN (%s) ) NOT NULL DEFAULT 1,
+        run_count INTEGER DEFAULT 0,
+        last_run_outcome INTEGER CHECK( last_run_outcome IN (%s) ) NULL DEFAULT NULL,
         run_at_dt TIMESTAMP not null
-        )'''% ','.join(  str(s.value) for s in event.TaskStatus ) )
+        )'''% ( event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all),  
+                event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all) ) )
    
         c.execute('''CREATE TABLE event_task_prereq (
         prereq_id INTEGER primary key,

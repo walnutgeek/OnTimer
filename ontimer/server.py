@@ -16,6 +16,7 @@ from .db import Dao
 cl = []
 dao = None
 config = None
+active_events = None
 
 class IndexHandler(web.RequestHandler):
     def get(self):
@@ -54,6 +55,7 @@ def callback(): print "interval callback dt=%s" % (datetime.datetime.now() )
 def run_server(_dao):
     dao = _dao
     config = dao.apply_config()
+    active_events = dao.get_active_events()
     
     app = web.Application([
         (r'/', IndexHandler),
