@@ -1,0 +1,61 @@
+events:
+  - name: price
+    vars: 
+      - name: region
+        type: STR #elements: [ us, eu, asia ]
+      - name: time
+        type: DATETIME
+    generators:
+      - name: us
+        on_time: 
+          timezone: US/Pacific
+          onexp: 0 14 * * MON-FRI
+        vals: 
+          - us
+          - eval: dt 
+        wait_final_stage: true
+    tasks:
+      - name: download_prices
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/HistoricalPrices.ipynb --html HistoricalPrices.html 
+      - name: calculate_returns
+        depends_on: [download_prices]
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/HistoricalReturns.ipynb --html HistoricalReturns.html 
+  - name: tree
+    vars: 
+      - name: time
+        type: DATETIME
+    generators:
+      - name: 10am
+        on_time: 
+          timezone: US/Pacific
+          onexp: 0 10 * * MON-FRI
+        vals: 
+          - eval: dt 
+        wait_final_stage: true
+    tasks:
+      - name: start
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/start.ipynb --html start.html 
+      - name: branch1
+        depends_on: [start]
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/branch1.ipynb --html branch1.html 
+      - name: branch2
+        depends_on: [start]
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/branch2.ipynb --html branch2.html 
+      - name: join1
+        depends_on: [branch1, branch2] 
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/join.ipynb --html join.html 
+      - name: join2
+        depends_on: [join1, branch3] 
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/join2.ipynb --html join2.html 
+      - name: branch3
+        depends_on: [branch2] 
+        type: ProcessRunner
+        cmd: runipy {ipy_path}/branch3.ipynb --html branch3.html 
+             
