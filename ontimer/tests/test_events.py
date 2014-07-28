@@ -31,7 +31,9 @@ def test_Event_obj():
     eq_(2,len(tasks))
 
 def test_joinEnumsIndices():
-    eq_("1,2,3,11,101,102",event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all))
-    eq_("11,101,102",event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all))
+    eq_("1,3,5",event.joinEnumsIndices(event.EventStatus,event.MetaStates.active))
+    eq_("1,2,3,4",event.joinEnumsIndices(event.TaskStatus,event.MetaStates.active))
+    eq_("1,2,3,4,11,101,102",event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all))
+    eq_("3,101,102",event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all))
     eq_(event.TaskStatus.success,event.RunOutcome.success)
 

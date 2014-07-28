@@ -9,10 +9,15 @@ import json
 from . import OnTime
 from . import utils
 import datetime
+import sys
 
 global_config={}
 
-def joinEnumsIndices(e,meta): return ','.join( str(v.value) for v in e if v.isMetaStatus(meta) )
+def joinEnumsIndices(e,meta): 
+    return ','.join( str(v.value) for v in e if v.isMetaStatus(meta) )
+
+def joinEnumsIndicesExcept(e,meta): 
+    return ','.join( str(v.value) for v in e if not(v.isMetaStatus(meta)) )
 
 class MetaStates(IntEnum):
     all = 0
@@ -21,8 +26,8 @@ class MetaStates(IntEnum):
     
 class EventStatus(IntEnum):
     active = 1
-    eta_breach = 2 
     fail = 3
+    eta_breach = 5 
     paused = 11
     success = 101
     skip = 102
@@ -32,19 +37,21 @@ class EventStatus(IntEnum):
 class TaskStatus(IntEnum):
     scheduled = 1
     running = 2
-    retry = 3
-    fail = 11
+    fail = 3
+    retry = 4
+    paused = 11
     success = 101
     skip = 102
 
     def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
     
 class RunOutcome(IntEnum):
-    fail = 11
+    fail = 3
     success = 101
     skip = 102
 
-    def isMetaStatus(self,meta): return [True,True,False ][meta]
+    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
+    
 class VarTypes(Enum):
     STR = (lambda s: s,      
            lambda s: str(s))
@@ -100,10 +107,13 @@ class VarDef:
         
 class GeneratorDef:
     def __init__(self, v): 
-        self.name = str(v.pop('name'))
-        self.on_time = OnTime.fromdict(v.pop('on_time') )
-        self.wait_final_stage = bool(v.pop('wait_final_stage'))
-        self.vals = v.pop('vals')
+        try:
+            self.name = str(v.pop('name'))
+            self.on_time = OnTime.fromdict(v.pop('on_time') )
+            self.wait_final_stage = bool(v.pop('wait_final_stage'))
+            self.vals = v.pop('vals')
+        except: 
+            raise ValueError("caught error:%r property: %s" % (sys.exc_info() ,str(v)))
         if len(v) > 0:
             raise ValueError("Not supported property: %s" % str(v))
     
@@ -142,6 +152,7 @@ class Event:
     def __init__(self, event_type,data_tuple, generator=None, started_dt=datetime.datetime.utcnow(), eta_dt=None):
         self.type = event_type
         self.data = data_tuple
+        self.status = EventStatus.active 
         self.generator = generator
         self.started_dt = started_dt
         self.eta_dt = eta_dt
@@ -159,6 +170,7 @@ class Event:
         return joinEventString( [self.type.name] + [self.type.vars[i].toStr(v) for i,v in enumerate(self.data)] )
 
     def __repr__(self): return self.__str__()
+    
     def generator_id(self): return self.generator.generator_id if self.generator else None
     
     def tasks(self):
