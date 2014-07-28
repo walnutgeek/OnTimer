@@ -41,7 +41,7 @@ class State:
             
     def pushToOne(self,client):
             if self.json:
-                print "dt=%s sending=%s" % ( datetime.datetime.now() , self.json )
+                #print "dt=%s sending=%s" % ( datetime.datetime.now() , self.json )
                 client.write_message(self.json)        
 
     def addClient(self,client):
