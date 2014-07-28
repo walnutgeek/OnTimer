@@ -55,7 +55,6 @@ docs/_build/
 /.settings
 /.README.md.html
 /.MinimalViableProduct.md.html
-/sample-config.yaml
 /test-out
 /.OnExp.md.html
 /root
