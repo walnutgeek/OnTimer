@@ -19,6 +19,12 @@ def joinEnumsIndices(e,meta):
 def joinEnumsIndicesExcept(e,meta): 
     return ','.join( str(v.value) for v in e if not(v.isMetaStatus(meta)) )
 
+def findEnum(enum,v):
+    for e in list(enum):
+        if e.value == v or e.name == v:
+            return e
+    raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
+
 class MetaStates(IntEnum):
     all = 0
     final = 1

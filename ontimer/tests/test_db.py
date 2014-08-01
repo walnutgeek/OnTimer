@@ -1,6 +1,8 @@
 import os
 import shutil
 import unittest
+import time
+
 
 from nose.tools import eq_,with_setup
 from .. import OnExp, OnState, event
@@ -57,7 +59,38 @@ def test_emit():
     
 def test_active_events():
     dao.get_active_events()
-
+    
+def test_get_tasks_to_run():
+    r=dao.get_tasks_to_run()
+    eq_(1,len(r))
+    t1 = r[0]
+    et_id = t1['event_task_id']
+    eq_(1,et_id)
+    artifact = { 'event_task_id' : et_id, 
+                'name' : 'key',
+                'value' : 'value'
+            }
+    dao.store_artifact(artifact)
+    score = { 'event_task_id' : et_id,
+               'name' : 'score',
+               'score' : 17 }
+    dao.add_artifact_score(score)
+    score['score'] = 21
+    dao.add_artifact_score(score)
+    artifact['value'] = 'vv'
+    dao.store_artifact(artifact)
+    t1['new_task_status'] = event.TaskStatus.success
+    eq_(True,dao.update_task(t1))
+    r=dao.get_tasks_to_run()
+    eq_(1,len(r))
+    t2 = r[0]
+    et_id2 = t2['event_task_id']
+    eq_(2,et_id2)
+    types,events,tasks=dao.get_active_events()
+    ev=events[1]
+    ev['new_event_status']=event.EventStatus.fail
+    dao.update_event(ev)
+    
  
         
 

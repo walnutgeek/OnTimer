@@ -1,4 +1,5 @@
 import hashlib
+import datetime
 import sqlite3
 import os
 from . import event
@@ -118,6 +119,105 @@ class Dao:
                 task['depend_on'] = [d[0]]
         return alltypes, allevents, alltasks
 
+    @staticmethod
+    def _fetchAllRecords(cursor, result):
+        return list({col[0]:v[i] for (i, col) in enumerate(cursor.description)} for v in result)
+
+    @_conn_decorator
+    def get_tasks_to_run(self, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        return Dao._fetchAllRecords(cursor, cursor.execute('''
+            select et.* from event_task et 
+            where et.run_at_dt <= ? and et.task_status <= 10 
+            and not exists ( 
+            select 'x' from  event_task_prereq p, event_task bt 
+            where et.event_task_id = p.event_task_id 
+            and p.before_task_id = bt.event_task_id and bt.task_status <= 100 )
+            ''', (datetime.datetime.utcnow(),)) )
+
+    @_conn_decorator
+    def update_event(self, event, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        newstate = dict(event)
+        newstate.update(utc_now = datetime.datetime.utcnow( ))
+        cursor.execute(''' update event set 
+             updated_dt = :utc_now,
+             event_status = :new_event_status,
+             finished_dt = :finished_dt,
+             eta_dt = :eta_dt 
+            where
+             event_id = :event_id and
+             event_status = :event_status
+            ''', newstate)
+        if cursor.rowcount == 1 :
+            conn.commit()
+            return True
+        return False
+    
+    @_conn_decorator
+    def update_task(self, task, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        newtask = dict(task)
+        newtask.update(utc_now = datetime.datetime.utcnow( ))
+        cursor.execute(''' update event_task set 
+             updated_dt = :utc_now,
+             task_status = :new_task_status,
+             run_count = :run_count,
+             task_state = :task_state,
+             last_run_outcome = :last_run_outcome
+            where
+             event_task_id = :event_task_id and
+             updated_dt = :updated_dt and
+             task_status = :task_status
+            ''', newtask)
+        if cursor.rowcount == 1 :
+            conn.commit()
+            return True
+        return False
+
+    @_conn_decorator
+    def store_artifact(self, artifact, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        artifact = dict(artifact)
+        artifact.update(utc_now = datetime.datetime.utcnow( ))
+        cursor.execute('''UPDATE artifact SET value = :value, stored_dt = :utc_now 
+            WHERE  event_task_id = :event_task_id and name = :name
+            ''', artifact)
+        if cursor.rowcount == 0 :
+            cursor.execute('''INSERT INTO artifact (event_task_id, name, value, stored_dt) 
+                VALUES ( :event_task_id, :name, :value, :utc_now)
+                ''', artifact)
+        elif cursor.rowcount != 1:
+            raise ValueError('unexpected row count: %d storing: %r' % (cursor.rowcount, artifact))
+        conn.commit()
+
+    @_conn_decorator
+    def add_artifact_score(self, score, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        result = list(cursor.execute('''SELECT artifact_id FROM artifact
+            WHERE  event_task_id = :event_task_id and name = :name
+            ''', score))
+        score = dict(score)
+        score.update(utc_now = datetime.datetime.utcnow( ))
+        if len(result) == 0 :
+            cursor.execute('''INSERT INTO artifact (event_task_id, name, value, stored_dt) 
+                VALUES ( :event_task_id, :name, NULL, :utc_now)
+                ''', score)
+            score.update(artifact_id = cursor.lastrowid)
+        elif len(result) == 1 :
+            score.update(artifact_id = result[0][0])
+        else:
+            raise ValueError('too many artifact_ids: %r for %r' % score)
+        cursor.execute('''INSERT INTO artifact_score (artifact_id, score, updated_dt) 
+            VALUES (:artifact_id, :score, :utc_now );
+            ''', score)
+        conn.commit()
+        
     @_conn_decorator
     def emit_event(self, event, cursor=None, conn=None):
         if not(cursor):
@@ -131,9 +231,9 @@ class Dao:
         for t in event.tasks() :
             task_dict[t.task_name()]=t
             self.query('''insert into event_task 
-                (event_id, task_id, task_state, task_status, run_at_dt) 
-                values (?, ?, ?, ?, ?)''', 
-                (event.event_id,t.task_id(),t.state(),t.status.value,t.run_at_dt), cursor=cursor, conn=conn)
+                (event_id, task_id, task_state, task_status, run_at_dt, updated_dt) 
+                values (?, ?, ?, ?, ?, ?)''', 
+                (event.event_id,t.task_id(),t.state(),t.status.value,t.run_at_dt,datetime.datetime.utcnow()), cursor=cursor, conn=conn)
             t.event_task_id =  cursor.lastrowid
         for t in event.tasks() :
             if t.task.depends_on :
@@ -238,7 +338,8 @@ class Dao:
         generator_id INTEGER references generator(generator_id),
         started_dt TIMESTAMP not null,
         finished_dt TIMESTAMP ,
-        eta_dt TIMESTAMP 
+        eta_dt TIMESTAMP, 
+        updated_dt TIMESTAMP 
         )''' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.all) )
     
         c.execute('''CREATE TABLE task (
@@ -256,6 +357,7 @@ class Dao:
         task_status INTEGER CHECK( task_status IN (%s) ) NOT NULL DEFAULT 1,
         run_count INTEGER DEFAULT 0,
         last_run_outcome INTEGER CHECK( last_run_outcome IN (%s) ) NULL DEFAULT NULL,
+        updated_dt TIMESTAMP not null,
         run_at_dt TIMESTAMP not null
         )'''% ( event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all),  
                 event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all) ) )
@@ -270,14 +372,14 @@ class Dao:
         artifact_id INTEGER primary key,
         event_task_id INTEGER references event_task(event_task_id),
         name TEXT,
-        value TEXT,
+        value TEXT null,
         stored_dt TIMESTAMP
         )''')
         
-        c.execute('''CREATE TABLE artifact_state (
-        artifact_state_id INTEGER primary key,
+        c.execute('''CREATE TABLE artifact_score (
+        artifact_score_id INTEGER primary key,
         artifact_id INTEGER references artifact(artifact_id),
-        value INTEGER,
+        score INTEGER,
         updated_dt TIMESTAMP
         )''')
         
