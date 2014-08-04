@@ -37,3 +37,6 @@ def test_joinEnumsIndices():
     eq_("3,101,102",event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all))
     eq_(event.TaskStatus.success,event.RunOutcome.success)
 
+def test_enums():
+    eq_(event.TaskStatus.success,event.findEnum(event.TaskStatus, 'success'))
+    eq_(event.TaskStatus.success,event.findEnum(event.TaskStatus, 101))
