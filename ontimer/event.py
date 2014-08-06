@@ -19,6 +19,15 @@ def joinEnumsIndices(e,meta):
 def joinEnumsIndicesExcept(e,meta): 
     return ','.join( str(v.value) for v in e if not(v.isMetaStatus(meta)) )
 
+def task_vars(task):
+    return event_vars(task).update( event_task_id  = int(task['event_task_id']), run = int(task['run_count']) )
+
+def event_vars(event):
+    evars = dict(global_config) 
+    event_id = int(event['event_id'])
+    evars.update( event_id = event_id, event_major = event_id / 100, event_minor = event_id % 100 )
+    return evars
+
 def findEnum(enum,v):
     for e in list(enum):
         if e.value == v or e.name == v:
@@ -78,6 +87,7 @@ class Config:
     def __init__(self,s):
         y = yaml.load(s)
         self.events = [EventType(e) for e in y.pop('events') ]
+        self.globals = y.pop('globals')
         if len(y) > 0:
             raise ValueError("Not supported property: %s" % str(y))
         
@@ -127,8 +137,6 @@ class TaskDef:
     def __init__(self, v):
         self.name = str(v.pop('name'))
         self.depends_on = v.pop('depends_on', None)
-        taskType = v.pop('type') 
-        self.type = 'ontimer.runner.%s' % taskType 
         self.cmd = str(v.pop('cmd'))
         if len(v) > 0:
             raise ValueError("Not supported property: %s" % str(v))

@@ -1,3 +1,5 @@
+globals:
+  logs_dir: "{ontimer_root}/logs/j{event_major}/n{event_minor}_t{event_task_id}_r{run}/"
 events:
   - name: price
     vars: 
@@ -16,10 +18,8 @@ events:
         wait_final_stage: true
     tasks:
       - name: download_prices
-        type: ProcessRunner #ontimer.runner.ProcessRunner
         cmd: runipy {ipy_path}/HistoricalPrices.ipynb --html HistoricalPrices.html 
       - name: calculate_returns
-        type: ProcessRunner #ontimer.runner.ProcessRunner
         depends_on: [ download_prices ]
         cmd: runipy {ipy_path}/HistoricalReturns.ipynb --html HistoricalReturns.html
  
