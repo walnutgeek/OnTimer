@@ -26,6 +26,18 @@ def _conn_decorator(f):
             finally:
                 conn.close()
     return magic
+def _fetchAllRecords(cursor, result):
+    return list({col[0]:v[i] for (i, col) in enumerate(cursor.description)} for v in result)
+
+def _prepareUpdateVars(template, data ):
+    assignments = []
+    for key in template:
+        dirty_key = '_' + key 
+        if dirty_key in data:
+            assignments.append('%s = :%s' % (key,dirty_key) )
+    if not(assignments):
+        raise ValueError("Have nothing to update: %r", data)
+    return ', '.join(assignments)
 
 class Dao:
     def __init__(self, root, filename = default_filename):
@@ -119,15 +131,12 @@ class Dao:
                 task['depend_on'] = [d[0]]
         return alltypes, allevents, alltasks
 
-    @staticmethod
-    def _fetchAllRecords(cursor, result):
-        return list({col[0]:v[i] for (i, col) in enumerate(cursor.description)} for v in result)
-
+         
     @_conn_decorator
     def get_tasks_to_run(self, cursor=None, conn=None):
         if not(cursor):
             cursor = conn.cursor()
-        return Dao._fetchAllRecords(cursor, cursor.execute('''
+        return _fetchAllRecords(cursor, cursor.execute('''
             select et.* from event_task et 
             where et.run_at_dt <= ? and et.task_status <= 10 
             and not exists ( 
@@ -138,46 +147,60 @@ class Dao:
 
     @_conn_decorator
     def update_event(self, event, cursor=None, conn=None):
+        set_vars = _prepareUpdateVars([
+              'event_status',
+              'finished_dt',
+              'eta_dt',
+              ],event)
         if not(cursor):
             cursor = conn.cursor()
         newstate = dict(event)
         newstate.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute(''' update event set 
              updated_dt = :utc_now,
-             event_status = :new_event_status,
-             finished_dt = :finished_dt,
-             eta_dt = :eta_dt 
-            where
+             %s 
+             where
              event_id = :event_id and
              event_status = :event_status
-            ''', newstate)
+            ''' % set_vars , newstate)
         if cursor.rowcount == 1 :
             conn.commit()
             return True
         return False
-    
+   
+     
     @_conn_decorator
     def update_task(self, task, cursor=None, conn=None):
+        set_vars = _prepareUpdateVars([
+              'task_status',
+              'run_count',
+              'task_state',
+              'last_run_outcome',
+              ],task)
         if not(cursor):
             cursor = conn.cursor()
         newtask = dict(task)
         newtask.update(utc_now = datetime.datetime.utcnow( ))
-        cursor.execute(''' update event_task set 
+        cursor.execute('''update event_task set 
              updated_dt = :utc_now,
-             task_status = :new_task_status,
-             run_count = :run_count,
-             task_state = :task_state,
-             last_run_outcome = :last_run_outcome
-            where
+             %s
+             where
              event_task_id = :event_task_id and
              updated_dt = :updated_dt and
              task_status = :task_status
-            ''', newtask)
+            ''' % set_vars, newtask)
         if cursor.rowcount == 1 :
             conn.commit()
             return True
         return False
 
+    @_conn_decorator
+    def load_task(self, task, cursor=None, conn=None):
+        result = cursor.execute('select et.* from event_task et where et.event_task_id = :event_task_id', (task, ))
+        if len(result)!=1:
+            raise ValueError('expect to get one instead of %d record for %r ' % (len(result),task) )
+        return _fetchAllRecords( cursor, result )[0]
+        
     @_conn_decorator
     def store_artifact(self, artifact, cursor=None, conn=None):
         if not(cursor):

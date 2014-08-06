@@ -79,7 +79,7 @@ def test_get_tasks_to_run():
     dao.add_artifact_score(score)
     artifact['value'] = 'vv'
     dao.store_artifact(artifact)
-    t1['new_task_status'] = event.TaskStatus.success
+    t1['_task_status'] = event.TaskStatus.success
     eq_(True,dao.update_task(t1))
     r=dao.get_tasks_to_run()
     eq_(1,len(r))
@@ -88,8 +88,8 @@ def test_get_tasks_to_run():
     eq_(2,et_id2)
     types,events,tasks=dao.get_active_events()
     ev=events[1]
-    ev['new_event_status']=event.EventStatus.fail
-    dao.update_event(ev)
+    ev['_event_status']=event.EventStatus.fail
+    eq_(True,dao.update_event(ev))
     
  
         
