@@ -3,7 +3,7 @@ Created on Jul 21, 2014
 
 @author: sergeyk
 '''
-from tornado import websocket, web, ioloop
+from tornado import websocket, web, ioloop, iostream
 import socket
 import datetime
 import json
@@ -11,21 +11,76 @@ import yaml
 import os
 from . import event
 from .db import Dao
+import shlex, subprocess
 
 
+class Run:
+    def __init__(self,state, task):
+        self.state = state
+        self.task = task
+        self.update_task( _run_count = task['run_count'] + 1 , _task_status = event.TaskStatus.running )
+        self.task_state = json.loads(self.task.state)
+        self.args = shlex.split(self.task_state.cmd)
+        self.rundir = self.state.config.globals['logs_dir'].format(event.task_vars(self.task))
+        os.makedirs(self.rundir)
+        self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.out_stream = iostream.PipeIOStream(self.process.stdout)
+        self.err_stream = iostream.PipeIOStream(self.process.stderr)
+        def streaming_callback(run, filename):
+            fd=open(os.path.join(run.rundir, filename),'w')
+            flen = 0
+            def callback(buff):
+                l = len(buff)
+                if l > 0:
+                    fd.write(buff)
+                    flen += l
+                    run.state.dao.add_artifact_score(dict(event_task_id=run.task.event_task_id, name=filename, score=flen))
+                else:
+                    fd.close()
+            return callback
+        self.out_stream.read_bytes(64 * 1024, streaming_callback=streaming_callback(self,'out_stream'))
+        self.err_stream.read_bytes(64 * 1024, streaming_callback=streaming_callback(self,'err_stream'))
 
+    def update_task(self, **kwargs):
+        self.task.update(**kwargs)
+        if self.state.dao.update_task(self.task):
+            self.task = state.dao.load_task(self.task)
+        else:
+            raise ValueError('task already processed by somewhere else %r' % self.task)
+            
+    def stillRunning(self):
+        if self.process.poll():
+            # clean up
+            rc = self.process.returncode
+            self.state.dao.add_artifact_score(dict(event_task_id=self.task.event_task_id, name='return_code', score=rc))
+            if rc == 0:
+                self.update_task(_task_status = event.TaskStatus.success,_last_run_outcome = event.RunOutcome.success )
+            else:
+                self.update_task(_task_status = event.TaskStatus.fail,_last_run_outcome = event.RunOutcome.fail )
+            self.err_stream.close()
+            self.out_stream.close()
+            return False
+        return True
+                
+        
 class State:
     def __init__(self, dao):
         self.dao = dao
         self.clients = []
         self.config = self.dao.apply_config()
-        self.types = None
+        self.tasks = None
         self.events = None
         self.types = None
         self.json = None
+        self.runs = []
         event.global_config.update(self.dao.get_global_vars())
     
     def check(self):
+        for task in self.dao.get_tasks_to_run():
+            self.runs.append(Run(self,task))
+        self.runs = [run for run in self.runs if run.stillRunning()]
+               
+            
         types,events,tasks = self.dao.get_active_events()
         json_data = json.dumps(types)
         if json_data != self.json:
@@ -82,8 +137,6 @@ class ApiHandler(web.RequestHandler):
     def post(self):
         pass
 
-def callback(): 
-    state.check()
 
 
 class FileHandler(web.StaticFileHandler):
@@ -111,7 +164,7 @@ def run_server(_dao):
     #milliseconds
     interval_ms = 5 * 1000
     main_loop = ioloop.IOLoop.instance()
-    scheduler = ioloop.PeriodicCallback(callback, interval_ms, io_loop = main_loop)
+    scheduler = ioloop.PeriodicCallback(lambda: state.check() , interval_ms, io_loop = main_loop)
     #start your period timer
     scheduler.start()
     main_loop.start()

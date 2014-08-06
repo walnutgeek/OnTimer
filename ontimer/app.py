@@ -5,7 +5,7 @@ import sys
 import os
 from .db import Dao
 from . import server
-
+from . import event
 
 
 def warning(*objs):
@@ -42,7 +42,9 @@ def main():
     parser.add_argument("--root", type=str, default='.', help='ontimer root dir to store db and artifacts. if not provided current directory will be used as default.')
     parser.add_argument("--config", type=str, help='config file to use.')
     args = parser.parse_args()
-    dao=Dao( os.path.abspath(args.root) )
+    abs_root = os.path.abspath(args.root)
+    event.global_config.update(ontimer_root =abs_root)
+    dao=Dao(abs_root)
     try:
         args.func(args)
     except ValueError, e:
