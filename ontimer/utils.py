@@ -17,7 +17,8 @@ all_formats = [format_Y_m_d_H_M_S,
                format_Y_m_d,
                format_Ymd]
 
-def toDateTime(s,formats):
+def toDateTime(s,formats=all_formats):
+    '''try different date formats to parse string'''
     for f in formats:
         try:
             return datetime.datetime.strptime(s, f)
@@ -26,5 +27,8 @@ def toDateTime(s,formats):
     raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
 
 
+def quict(**kwargs): 
+    ''' quick way to create dict() '''
+    return kwargs
 
 

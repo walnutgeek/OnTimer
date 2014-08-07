@@ -136,14 +136,15 @@ class Dao:
     def get_tasks_to_run(self, cursor=None, conn=None):
         if not(cursor):
             cursor = conn.cursor()
-        return _fetchAllRecords(cursor, cursor.execute('''
-            select et.* from event_task et 
-            where et.run_at_dt <= ? and et.task_status <= 10 
+        q = '''select et.* from event_task et 
+            where et.run_at_dt <= ? and et.task_status in (%s) 
             and not exists ( 
             select 'x' from  event_task_prereq p, event_task bt 
             where et.event_task_id = p.event_task_id 
-            and p.before_task_id = bt.event_task_id and bt.task_status <= 100 )
-            ''', (datetime.datetime.utcnow(),)) )
+            and p.before_task_id = bt.event_task_id and bt.task_status in (%s) )
+            ''' % (event.joinEnumsIndices(event.TaskStatus,event.MetaStates.ready),
+                   event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )    
+        return _fetchAllRecords(cursor, cursor.execute(q,(datetime.datetime.utcnow(),)) )
 
     @_conn_decorator
     def update_event(self, event, cursor=None, conn=None):
@@ -196,7 +197,10 @@ class Dao:
 
     @_conn_decorator
     def load_task(self, task, cursor=None, conn=None):
-        result = cursor.execute('select et.* from event_task et where et.event_task_id = :event_task_id', (task, ))
+        if not(cursor):
+            cursor = conn.cursor()
+        result = list(cursor.execute('''select et.* from event_task et 
+        where et.event_task_id = :event_task_id''', task))
         if len(result)!=1:
             raise ValueError('expect to get one instead of %d record for %r ' % (len(result),task) )
         return _fetchAllRecords( cursor, result )[0]

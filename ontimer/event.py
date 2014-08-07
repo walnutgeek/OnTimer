@@ -20,7 +20,9 @@ def joinEnumsIndicesExcept(e,meta):
     return ','.join( str(v.value) for v in e if not(v.isMetaStatus(meta)) )
 
 def task_vars(task):
-    return event_vars(task).update( event_task_id  = int(task['event_task_id']), run = int(task['run_count']) )
+    tvars = event_vars(task)
+    tvars.update( event_task_id  = int(task['event_task_id']), run = int(task['run_count']) )
+    return tvars
 
 def event_vars(event):
     evars = dict(global_config) 
@@ -38,6 +40,7 @@ class MetaStates(IntEnum):
     all = 0
     final = 1
     active = 2
+    ready = 3
     
 class EventStatus(IntEnum):
     active = 1
@@ -47,7 +50,7 @@ class EventStatus(IntEnum):
     success = 101
     skip = 102
     
-    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
+    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 , self.value <= 10][meta]
     
 class TaskStatus(IntEnum):
     scheduled = 1
@@ -58,14 +61,14 @@ class TaskStatus(IntEnum):
     success = 101
     skip = 102
 
-    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
+    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10, self in (TaskStatus.scheduled,TaskStatus.retry) ][meta]
     
 class RunOutcome(IntEnum):
     fail = 3
     success = 101
     skip = 102
 
-    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 ][meta]
+    def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10, self.value <= 10][meta]
     
 class VarTypes(Enum):
     STR = (lambda s: s,      

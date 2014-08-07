@@ -11,6 +11,7 @@ import yaml
 import os
 from . import event
 from .db import Dao
+from .utils import quict
 import shlex, subprocess
 
 
@@ -19,27 +20,31 @@ class Run:
         self.state = state
         self.task = task
         self.update_task( _run_count = task['run_count'] + 1 , _task_status = event.TaskStatus.running )
-        self.task_state = json.loads(self.task.state)
-        self.args = shlex.split(self.task_state.cmd)
-        self.rundir = self.state.config.globals['logs_dir'].format(event.task_vars(self.task))
+        self.task_state = json.loads(self.task['task_state'])
+        self.args = shlex.split(self.task_state['cmd'])
+        self.task_vars = event.task_vars(self.task)
+        self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         os.makedirs(self.rundir)
         self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        self.out_stream = iostream.PipeIOStream(self.process.stdout)
-        self.err_stream = iostream.PipeIOStream(self.process.stderr)
+        self.out_stream = iostream.PipeIOStream(self.process.stdout.fileno(),io_loop=ioloop.IOLoop.instance(),max_buffer_size=8192)
+        self.err_stream = iostream.PipeIOStream(self.process.stderr.fileno(),io_loop=ioloop.IOLoop.instance(),max_buffer_size=8192)
+        
         def streaming_callback(run, filename):
             fd=open(os.path.join(run.rundir, filename),'w')
-            flen = 0
+            flen = [0]
             def callback(buff):
                 l = len(buff)
+                flen[0] += l
+                run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], name=filename, score=flen[0]))
                 if l > 0:
                     fd.write(buff)
-                    flen += l
-                    run.state.dao.add_artifact_score(dict(event_task_id=run.task.event_task_id, name=filename, score=flen))
                 else:
                     fd.close()
             return callback
-        self.out_stream.read_bytes(64 * 1024, streaming_callback=streaming_callback(self,'out_stream'))
-        self.err_stream.read_bytes(64 * 1024, streaming_callback=streaming_callback(self,'err_stream'))
+        outcallbk = streaming_callback(self,'out_stream')
+        errcallbk = streaming_callback(self,'err_stream')
+        self.out_stream.read_until_close(outcallbk, streaming_callback=outcallbk)
+        self.err_stream.read_until_close(errcallbk, streaming_callback=errcallbk)
 
     def update_task(self, **kwargs):
         self.task.update(**kwargs)
@@ -52,13 +57,16 @@ class Run:
         if self.process.poll():
             # clean up
             rc = self.process.returncode
-            self.state.dao.add_artifact_score(dict(event_task_id=self.task.event_task_id, name='return_code', score=rc))
+            self.state.dao.add_artifact_score(quict(event_task_id=self.task['event_task_id'], name='return_code', score=rc))
             if rc == 0:
                 self.update_task(_task_status = event.TaskStatus.success,_last_run_outcome = event.RunOutcome.success )
             else:
                 self.update_task(_task_status = event.TaskStatus.fail,_last_run_outcome = event.RunOutcome.fail )
-            self.err_stream.close()
-            self.out_stream.close()
+            print
+            ioloop.IOLoop.instance().remove_handler(self.process.stdout)
+            ioloop.IOLoop.instance().remove_handler(self.process.stderr)
+#             self.err_stream.close()
+#             self.out_stream.close()
             return False
         return True
                 
