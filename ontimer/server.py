@@ -35,7 +35,7 @@ class Run:
             def callback(buff):
                 l = len(buff)
                 flen[0] += l
-                run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], name=filename, score=flen[0]))
+                run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], run=run.task['run_count'], name=filename, score=flen[0]))
                 if l > 0:
                     fd.write(buff)
                 else:
@@ -57,7 +57,7 @@ class Run:
         if self.process.poll():
             # clean up
             rc = self.process.returncode
-            self.state.dao.add_artifact_score(quict(event_task_id=self.task['event_task_id'], name='return_code', score=rc))
+            self.state.dao.add_artifact_score(quict(event_task_id=self.task['event_task_id'], run=self.task['run_count'], name='return_code', score=rc))
             if rc == 0:
                 self.update_task(_task_status = event.TaskStatus.success,_last_run_outcome = event.RunOutcome.success )
             else:

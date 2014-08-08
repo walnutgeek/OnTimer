@@ -212,11 +212,11 @@ class Dao:
         artifact = dict(artifact)
         artifact.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute('''UPDATE artifact SET value = :value, stored_dt = :utc_now 
-            WHERE  event_task_id = :event_task_id and name = :name
+            WHERE  event_task_id = :event_task_id and run = :run and name = :name
             ''', artifact)
         if cursor.rowcount == 0 :
-            cursor.execute('''INSERT INTO artifact (event_task_id, name, value, stored_dt) 
-                VALUES ( :event_task_id, :name, :value, :utc_now)
+            cursor.execute('''INSERT INTO artifact (event_task_id, run, name, value, stored_dt) 
+                VALUES ( :event_task_id, :run,  :name, :value, :utc_now)
                 ''', artifact)
         elif cursor.rowcount != 1:
             raise ValueError('unexpected row count: %d storing: %r' % (cursor.rowcount, artifact))
@@ -227,13 +227,13 @@ class Dao:
         if not(cursor):
             cursor = conn.cursor()
         result = list(cursor.execute('''SELECT artifact_id FROM artifact
-            WHERE  event_task_id = :event_task_id and name = :name
+            WHERE  event_task_id = :event_task_id and run = :run and name = :name
             ''', score))
         score = dict(score)
         score.update(utc_now = datetime.datetime.utcnow( ))
         if len(result) == 0 :
-            cursor.execute('''INSERT INTO artifact (event_task_id, name, value, stored_dt) 
-                VALUES ( :event_task_id, :name, NULL, :utc_now)
+            cursor.execute('''INSERT INTO artifact (event_task_id, run, name, value, stored_dt) 
+                VALUES ( :event_task_id, :run, :name, NULL, :utc_now)
                 ''', score)
             score.update(artifact_id = cursor.lastrowid)
         elif len(result) == 1 :
@@ -398,6 +398,7 @@ class Dao:
         c.execute('''CREATE TABLE artifact (
         artifact_id INTEGER primary key,
         event_task_id INTEGER references event_task(event_task_id),
+        run INTEGER not null,
         name TEXT,
         value TEXT null,
         stored_dt TIMESTAMP
