@@ -26,6 +26,7 @@ def _conn_decorator(f):
             finally:
                 conn.close()
     return magic
+
 def _fetchAllRecords(cursor, result):
     return list({col[0]:v[i] for (i, col) in enumerate(cursor.description)} for v in result)
 

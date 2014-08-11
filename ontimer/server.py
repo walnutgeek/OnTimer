@@ -1,19 +1,27 @@
 '''
-Created on Jul 21, 2014
-
-@author: sergeyk
+Server module
+running on websocket and static file web interface on tornado. 
+Same tornado ioloop managing concurrent jobs and recording 
+out/err streams in files.
 '''
 from tornado import websocket, web, ioloop, iostream
 import socket
 import datetime
 import json
 import yaml
+import functools
 import os
 from . import event
 from .db import Dao
 from .utils import quict
 import shlex, subprocess
 
+def read_stream(run, idx, fd, events):
+    buf = fd.read()
+    run.streams[idx][1].write(buf)
+    p = run.streams[idx][2] + len(buf)
+    run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], run=run.task['run_count'], name=run.streams[idx][3], score=p))
+    run.streams[idx][2] = p 
 
 class Run:
     def __init__(self,state, task):
@@ -26,25 +34,12 @@ class Run:
         self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         os.makedirs(self.rundir)
         self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        self.out_stream = iostream.PipeIOStream(self.process.stdout.fileno(),io_loop=ioloop.IOLoop.instance(),max_buffer_size=8192)
-        self.err_stream = iostream.PipeIOStream(self.process.stderr.fileno(),io_loop=ioloop.IOLoop.instance(),max_buffer_size=8192)
-        
-        def streaming_callback(run, filename):
-            fd=open(os.path.join(run.rundir, filename),'w')
-            flen = [0]
-            def callback(buff):
-                l = len(buff)
-                flen[0] += l
-                run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], run=run.task['run_count'], name=filename, score=flen[0]))
-                if l > 0:
-                    fd.write(buff)
-                else:
-                    fd.close()
-            return callback
-        outcallbk = streaming_callback(self,'out_stream')
-        errcallbk = streaming_callback(self,'err_stream')
-        self.out_stream.read_until_close(outcallbk, streaming_callback=outcallbk)
-        self.err_stream.read_until_close(errcallbk, streaming_callback=errcallbk)
+        self.streams = ( [self.process.stdout,open(os.path.join(self.rundir,'out_stream'),'w'),0 ,'out'],
+                         [self.process.stderr,open(os.path.join(self.rundir,'err_stream'),'w'),0 ,'err'],
+                         )
+        io_loop = ioloop.IOLoop.instance()
+        for idx in range(2):
+            io_loop.add_handler(self.streams[idx][0], functools.partial(read_stream, self, idx), io_loop.READ)
 
     def update_task(self, **kwargs):
         self.task.update(**kwargs)
@@ -62,11 +57,11 @@ class Run:
                 self.update_task(_task_status = event.TaskStatus.success,_last_run_outcome = event.RunOutcome.success )
             else:
                 self.update_task(_task_status = event.TaskStatus.fail,_last_run_outcome = event.RunOutcome.fail )
-            print
-            ioloop.IOLoop.instance().remove_handler(self.process.stdout)
-            ioloop.IOLoop.instance().remove_handler(self.process.stderr)
-#             self.err_stream.close()
-#             self.out_stream.close()
+            io_loop = ioloop.IOLoop.instance()
+            for idx in range(2):
+                io_loop.remove_handler(self.streams[idx][0])
+                for f in self.streams[idx][0:1]:
+                    f.close()
             return False
         return True
                 
@@ -87,8 +82,6 @@ class State:
         for task in self.dao.get_tasks_to_run():
             self.runs.append(Run(self,task))
         self.runs = [run for run in self.runs if run.stillRunning()]
-               
-            
         types,events,tasks = self.dao.get_active_events()
         json_data = json.dumps(types)
         if json_data != self.json:
