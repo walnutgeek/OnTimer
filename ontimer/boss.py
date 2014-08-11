@@ -1,22 +1,24 @@
+#!/usr/bin/env python
 '''
 Boss - app printing random stuff and randomly freaks out.
 
-Diclaimer: this application has noting to do with my previous or current bosses. All 
-simularties are coincidental.
+Disclaimer: this application has noting to do with my previous or current bosses. All 
+similarities are coincidental.
   
 
-Application that help to test ontimer scheduler 
-and exibit random behavior.
+Application purpose is to test ontimer scheduler 
+and exhibit random behavior.
 
 Credit due to Corporate BS generator: http://www.atrixnet.com/bs-generator.html
-I took arrays of adverbs, verbs, adjectives, nouns from there.
+I took arrays of adverbs, verbs, adjectives, nouns from there. I could not find 
+any copyright or terms of use on page. I guess it is ok, but if it is not, please  
+don't sue me just let me know. 
 
 '''
 from __future__ import print_function
 
 import argparse
 import sys
-import os
 from random import randrange
 from time import sleep
 
