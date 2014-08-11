@@ -43,7 +43,8 @@ README = read('README.md')
 setup(
     name='ontimer',
     entry_points={
-        'console_scripts': ['ontimer = ontimer.app:main']
+        'console_scripts': ['ontimer = ontimer.app:main',
+                            'boss = ontimer.boss:main']
     },
     version=find_version('ontimer', '__init__.py'),
     url='https://github.com/walnutgeek/OnTimer',
