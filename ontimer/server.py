@@ -11,17 +11,32 @@ import json
 import yaml
 import functools
 import os
+import fcntl
+import sys
+
 from . import event
 from .db import Dao
 from .utils import quict
 import shlex, subprocess
 
+_IN_STREAM = 0
+_OUT_FILE = 1
+_COUNTER = 2
+_NAME = 3
+
+def set_non_blocking(f): 
+    fd = f.fileno()
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    return f
+
 def read_stream(run, idx, fd, events):
     buf = fd.read()
-    run.streams[idx][1].write(buf)
-    p = run.streams[idx][2] + len(buf)
-    run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], run=run.task['run_count'], name=run.streams[idx][3], score=p))
-    run.streams[idx][2] = p 
+    if len(buf):
+        run.streams[idx][_OUT_FILE].write(buf)
+        p = run.streams[idx][_COUNTER] + len(buf)
+        run.state.dao.add_artifact_score(quict(event_task_id=run.task['event_task_id'], run=run.task['run_count'], name=run.streams[idx][3], score=p))
+        run.streams[idx][_COUNTER] = p 
 
 class Run:
     def __init__(self,state, task):
@@ -33,13 +48,18 @@ class Run:
         self.task_vars = event.task_vars(self.task)
         self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         os.makedirs(self.rundir)
-        self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        self.streams = ( [self.process.stdout,open(os.path.join(self.rundir,'out_stream'),'w'),0 ,'out'],
-                         [self.process.stderr,open(os.path.join(self.rundir,'err_stream'),'w'),0 ,'err'],
-                         )
+        self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+        print 'started task_id=%d cmd=%s' % ( self.task['event_task_id'], self.task_state['cmd'])
+        
+        self.streams = ( 
+             [ set_non_blocking(self.process.stdout), None, 0, 'out'],
+             [ set_non_blocking(self.process.stderr), None, 0, 'err'],
+        )
+        for stream in self.streams:
+            stream[_OUT_FILE] = open(os.path.join(self.rundir,'%s_stream' % stream[_NAME] ),'w')
         io_loop = ioloop.IOLoop.instance()
         for idx in range(2):
-            io_loop.add_handler(self.streams[idx][0], functools.partial(read_stream, self, idx), io_loop.READ)
+            io_loop.add_handler(self.streams[idx][_IN_STREAM], functools.partial(read_stream, self, idx), io_loop.READ)
 
     def update_task(self, **kwargs):
         self.task.update(**kwargs)
@@ -49,18 +69,19 @@ class Run:
             raise ValueError('task already processed by somewhere else %r' % self.task)
             
     def stillRunning(self):
-        if self.process.poll():
+        if self.process.poll() or self.process.returncode is not None :
             # clean up
             rc = self.process.returncode
-            self.state.dao.add_artifact_score(quict(event_task_id=self.task['event_task_id'], run=self.task['run_count'], name='return_code', score=rc))
+            print 'finished rc=%d task_id=%d' % (rc , self.task['event_task_id'])
+            self.state.dao.store_artifact(quict(event_task_id=self.task['event_task_id'], run=self.task['run_count'], name='return_code', value=rc))
             if rc == 0:
                 self.update_task(_task_status = event.TaskStatus.success,_last_run_outcome = event.RunOutcome.success )
             else:
                 self.update_task(_task_status = event.TaskStatus.fail,_last_run_outcome = event.RunOutcome.fail )
             io_loop = ioloop.IOLoop.instance()
             for idx in range(2):
-                io_loop.remove_handler(self.streams[idx][0])
-                for f in self.streams[idx][0:1]:
+                io_loop.remove_handler(self.streams[idx][_IN_STREAM])
+                for f in self.streams[idx][_IN_STREAM:_OUT_FILE]:
                     f.close()
             return False
         return True
@@ -82,6 +103,16 @@ class State:
         for task in self.dao.get_tasks_to_run():
             self.runs.append(Run(self,task))
         self.runs = [run for run in self.runs if run.stillRunning()]
+        #retry failed tasks
+        for task in self.dao.get_tasks_of_status(event.TaskStatus.fail):
+            next_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=5 * task['run_count'])
+            task.update( _task_status = event.TaskStatus.retry, _run_at_dt = next_time )
+            self.dao.update_task(task)
+        #finish events
+        for ev in self.dao.get_events_to_be_completed():
+            ev.update( _event_status = event.EventStatus.success, _finished_dt = datetime.datetime.utcnow() )
+            self.dao.update_event(ev)
+            
         types,events,tasks = self.dao.get_active_events()
         json_data = json.dumps(types)
         if json_data != self.json:

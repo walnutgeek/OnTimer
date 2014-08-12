@@ -123,7 +123,7 @@ class Dao:
             allevents[groups[1][_EVENT[_PK]]]=groups[1]
             alltasks[groups[2][_TASK[_PK]]]=groups[2]
         alltypes = self.tree_query((_TYPE, _EVENT, _TASK), ('events', 'tasks'), where, customize=populate_alltasks, cursor=cursor, conn=conn)
-        dependenies = cursor.execute(self._generate_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' ))
+        dependenies = cursor.execute(self._generate_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ))
         for d in dependenies:
             task=alltasks[d[1]]
             if 'depend_on' in task:
@@ -146,6 +146,25 @@ class Dao:
             ''' % (event.joinEnumsIndices(event.TaskStatus,event.MetaStates.ready),
                    event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )    
         return _fetchAllRecords(cursor, cursor.execute(q,(datetime.datetime.utcnow(),)) )
+
+    @_conn_decorator
+    def get_tasks_of_status(self, status, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        q = 'select et.* from event_task et  where et.task_status = ?'    
+        return _fetchAllRecords(cursor, cursor.execute(q,(status,)) )
+
+    @_conn_decorator
+    def get_events_to_be_completed(self, cursor=None, conn=None):
+        if not(cursor):
+            cursor = conn.cursor()
+        q = '''select e.* from event e  
+        where e.event_status in (%s) and not exists 
+        (select 'x' from event_task et 
+        where e.event_id = et.event_id and et.task_status in (%s) )
+        ''' % (event.joinEnumsIndices(event.EventStatus,event.MetaStates.active),
+              event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )     
+        return _fetchAllRecords(cursor, cursor.execute(q) )
 
     @_conn_decorator
     def update_event(self, event, cursor=None, conn=None):
@@ -178,6 +197,7 @@ class Dao:
               'run_count',
               'task_state',
               'last_run_outcome',
+              'run_at_dt',
               ],task)
         if not(cursor):
             cursor = conn.cursor()

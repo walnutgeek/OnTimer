@@ -45,7 +45,6 @@ class MetaStates(IntEnum):
 class EventStatus(IntEnum):
     active = 1
     fail = 3
-    eta_breach = 5 
     paused = 11
     success = 101
     skip = 102
