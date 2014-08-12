@@ -17,11 +17,14 @@ _PREREQ = 'event_task_prereq', 'prereq_id'
 def _conn_decorator(f):
     def magic(self, *args, **kwargs):
         if kwargs.get('conn'):
+            if 'cursor' not in kwargs:
+                kwargs['cursor']=kwargs.get('conn').cursor()
             return f(self,*args,**kwargs)
         else:
             conn = self.connect()
             try:
                 kwargs['conn']=conn
+                kwargs['cursor']=conn.cursor()
                 return f(self,*args,**kwargs)
             finally:
                 conn.close()
@@ -39,6 +42,11 @@ def _prepareUpdateVars(template, data ):
     if not(assignments):
         raise ValueError("Have nothing to update: %r", data)
     return ', '.join(assignments)
+
+def _generate_join(tables_keys, selectors, where = ''):
+    froms = ', '.join(map(lambda t:t[_TBL], tables_keys))
+    joins = ' and '.join('%s.%s = %s.%s' % (tables_keys[i + 1][0], tk[1], tk[0], tk[1]) for (i, tk) in enumerate(tables_keys[:-1]))
+    return 'select %s from %s where %s %s' % (selectors, froms, joins, where)
 
 class Dao:
     def __init__(self, root, filename = default_filename):
@@ -68,23 +76,15 @@ class Dao:
 
     @_conn_decorator
     def query(self, q, params=None, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
         return r
 
 
-    def _generate_join(self, tables_keys, selectors, where = ''):
-        froms = ', '.join(map(lambda t:t[_TBL], tables_keys))
-        joins = ' and '.join('%s.%s = %s.%s' % (tables_keys[i + 1][0], tk[1], tk[0], tk[1]) for (i, tk) in enumerate(tables_keys[:-1]))
-        return 'select %s from %s where %s %s' % (selectors, froms, joins, where)
 
     @_conn_decorator
     def tree_query(self, tables_keys, accdict_names, where='', customize = None, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         selectors = ', '.join( map( lambda t: t[_TBL] + '.*',tables_keys) )
-        query_result = list(cursor.execute(self._generate_join(tables_keys, selectors, where)) )
+        query_result = list(cursor.execute(_generate_join(tables_keys, selectors, where)) )
         result_with_colnames = map( lambda v: [ (col[0], v[i]) for i,col in enumerate(cursor.description) ], query_result )
         topdict={}
         for r in result_with_colnames:
@@ -114,8 +114,7 @@ class Dao:
 
     
     @_conn_decorator
-    def get_active_events(self, conn=None):
-        cursor = conn.cursor()
+    def get_active_events(self, cursor = None, conn=None):
         where = 'and event.event_status in (%s)' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
         alltasks={}
         allevents={}
@@ -123,7 +122,7 @@ class Dao:
             allevents[groups[1][_EVENT[_PK]]]=groups[1]
             alltasks[groups[2][_TASK[_PK]]]=groups[2]
         alltypes = self.tree_query((_TYPE, _EVENT, _TASK), ('events', 'tasks'), where, customize=populate_alltasks, cursor=cursor, conn=conn)
-        dependenies = cursor.execute(self._generate_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ))
+        dependenies = cursor.execute(_generate_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ))
         for d in dependenies:
             task=alltasks[d[1]]
             if 'depend_on' in task:
@@ -135,8 +134,6 @@ class Dao:
          
     @_conn_decorator
     def get_tasks_to_run(self, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         q = '''select et.* from event_task et 
             where et.run_at_dt <= ? and et.task_status in (%s) 
             and not exists ( 
@@ -149,15 +146,11 @@ class Dao:
 
     @_conn_decorator
     def get_tasks_of_status(self, status, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         q = 'select et.* from event_task et  where et.task_status = ?'    
         return _fetchAllRecords(cursor, cursor.execute(q,(status,)) )
 
     @_conn_decorator
     def get_events_to_be_completed(self, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         q = '''select e.* from event e  
         where e.event_status in (%s) and not exists 
         (select 'x' from event_task et 
@@ -173,8 +166,6 @@ class Dao:
               'finished_dt',
               'eta_dt',
               ],event)
-        if not(cursor):
-            cursor = conn.cursor()
         newstate = dict(event)
         newstate.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute(''' update event set 
@@ -218,8 +209,6 @@ class Dao:
 
     @_conn_decorator
     def load_task(self, task, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         result = list(cursor.execute('''select et.* from event_task et 
         where et.event_task_id = :event_task_id''', task))
         if len(result)!=1:
@@ -228,8 +217,6 @@ class Dao:
         
     @_conn_decorator
     def store_artifact(self, artifact, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         artifact = dict(artifact)
         artifact.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute('''UPDATE artifact SET value = :value, stored_dt = :utc_now 
@@ -245,8 +232,6 @@ class Dao:
 
     @_conn_decorator
     def add_artifact_score(self, score, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         result = list(cursor.execute('''SELECT artifact_id FROM artifact
             WHERE  event_task_id = :event_task_id and run = :run and name = :name
             ''', score))
@@ -268,72 +253,70 @@ class Dao:
         
     @_conn_decorator
     def emit_event(self, event, cursor=None, conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
-        self.query('''insert into event 
+        cursor.execute('''insert into event 
             (event_type_id,event_string,event_status,generator_id,started_dt,eta_dt) 
             values (?, ?, ?, ?, ?, ?)''', 
-            (event.type.event_type_id,str(event),event.status.value,event.generator_id(),event.started_dt,event.eta_dt), cursor=cursor, conn=conn)
+            (event.type.event_type_id,str(event),event.status.value,event.generator_id(),event.started_dt,event.eta_dt))
         event.event_id = cursor.lastrowid
         task_dict = {}
         for t in event.tasks() :
             task_dict[t.task_name()]=t
-            self.query('''insert into event_task 
+            cursor.execute('''insert into event_task 
                 (event_id, task_id, task_state, task_status, run_at_dt, updated_dt) 
                 values (?, ?, ?, ?, ?, ?)''', 
-                (event.event_id,t.task_id(),t.state(),t.status.value,t.run_at_dt,datetime.datetime.utcnow()), cursor=cursor, conn=conn)
+                (event.event_id,t.task_id(),t.state(),t.status.value,t.run_at_dt,datetime.datetime.utcnow()))
             t.event_task_id =  cursor.lastrowid
         for t in event.tasks() :
             if t.task.depends_on :
                 for upstream in t.task.depends_on :
-                    self.query('''insert into event_task_prereq 
+                    cursor.execute('''insert into event_task_prereq 
                                 (before_task_id, event_task_id) 
                                 values (?, ?)''', 
-                                (task_dict[upstream].event_task_id, t.event_task_id), cursor=cursor, conn=conn)
+                                (task_dict[upstream].event_task_id, t.event_task_id))
         conn.commit()
         return event
         
     @_conn_decorator
-    def set_config(self,config_text,conn=None):
+    def set_config(self,config_text,cursor=None,conn=None):
         event.Config(config_text)
-        r = self.get_config(conn=conn)
+        r = self.get_config(cursor=cursor, conn=conn)
         sha1 = hashlib.sha1(config_text).hexdigest()
         if not(r) or r[3] != sha1:
-            cursor = conn.cursor()
-            self.query("insert into config (uploaded_dt,config_text,config_sha1) values (CURRENT_TIMESTAMP,?,?)",(config_text,sha1),cursor = cursor,conn=conn)
-            self.query("update settings set current_config_id = ?, last_changed_dt=CURRENT_TIMESTAMP",(cursor.lastrowid,),cursor = cursor,conn=conn)
+            cursor.execute("insert into config (uploaded_dt,config_text,config_sha1) values (CURRENT_TIMESTAMP,?,?)",(config_text,sha1))
+            cursor.execute("update settings set current_config_id = ?, last_changed_dt=CURRENT_TIMESTAMP",(cursor.lastrowid,))
             conn.commit()
 
     @_conn_decorator
-    def apply_config(self,conn=None):
+    def apply_config(self,cursor=None,conn=None):
         r = self.get_config(conn=conn)
         config = event.Config(r[2])
         config.config_id = r[0]
-        cursor = conn.cursor()
         for event_type in config.events:
-            r = self.query("select event_type_id, last_seen_in_config_id from event_type where event_name = ?",(event_type.name,),cursor = cursor,conn=conn)
+            r = list(cursor.execute("select event_type_id, last_seen_in_config_id from event_type where event_name = ?",(event_type.name,)))
             if len(r) > 1 :
                 raise ValueError('duplicate for event_name: %s' % event_type.name)
             elif len(r) == 1:
                 event_type.event_type_id = r[0][0]
                 if r[0][1] != config.config_id:
-                    self.query("update event_type set last_seen_in_config_id = ? where  event_type_id = ?",(config.config_id,event_type.event_type_id),cursor = cursor,conn=conn)
+                    cursor.execute("update event_type set last_seen_in_config_id = ? where  event_type_id = ?",(config.config_id,event_type.event_type_id))
             else:
-                self.query("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id),cursor = cursor,conn=conn)
+                cursor.execute("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id))
                 event_type.event_type_id = cursor.lastrowid
             
             def update_ids(obj_list,name):
                 for obj in obj_list:
                     obj_id = None
-                    r = self.query("select {0}_id, last_seen_in_config_id from {0} where {0}_name = ? and event_type_id = ?".format(name),(obj.name,event_type.event_type_id),cursor = cursor,conn=conn)
+                    r = list(cursor.execute("select {0}_id, last_seen_in_config_id from {0} where {0}_name = ? and event_type_id = ?".format(name),
+                                            (obj.name,event_type.event_type_id)))
                     if len(r) > 1 :
                         raise ValueError('duplicate %s: %s' % name, obj.name)
                     elif len(r) == 1:
                         obj_id = r[0][0]
                         if r[0][1] != config.config_id:
-                            self.query("update {0} set last_seen_in_config_id = ? where  {0}_id = ?".format(name),(config.config_id,obj_id),cursor = cursor,conn=conn)
+                            cursor.execute("update {0} set last_seen_in_config_id = ? where  {0}_id = ?".format(name),(config.config_id,obj_id))
                     else:
-                        self.query("insert into {0} ({0}_name,event_type_id,last_seen_in_config_id) values (?,?,?)".format(name),(obj.name,event_type.event_type_id,config.config_id),cursor = cursor,conn=conn)
+                        cursor.execute("insert into {0} ({0}_name,event_type_id,last_seen_in_config_id) values (?,?,?)".format(name),
+                                       (obj.name,event_type.event_type_id,config.config_id))
                         obj_id = cursor.lastrowid
                     setattr(obj,'%s_id' % name, obj_id)
                     
@@ -345,8 +328,6 @@ class Dao:
             
     @_conn_decorator
     def set_global_var(self,key,value,cursor=None,conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         cursor.execute('UPDATE global_variables SET value = ? WHERE key = ?',(value,key))    
         if 0 == cursor.rowcount:
             cursor.execute('INSERT INTO global_variables (value,key) VALUES (?,?)',(value,key))
@@ -356,29 +337,27 @@ class Dao:
 
     @_conn_decorator
     def get_global_vars(self,cursor=None,conn=None):
-        if not(cursor):
-            cursor = conn.cursor()
         return dict(cursor.execute('SELECT key, value FROM global_variables'))   
         
     @_conn_decorator
-    def get_config(self,config_id=None,conn=None):
+    def get_config(self,config_id=None,cursor=None, conn=None):
         if not(config_id):
-            config_id = self.query('select current_config_id from settings', conn=conn)[0][0]
+            config_id = list(cursor.execute('select current_config_id from settings'))[0][0]
             if not(config_id):
                 return None
-        return self.query('select config_id,uploaded_dt,config_text,config_sha1 from config where config_id = ?', (config_id,), conn=conn)[0]
+        return list(cursor.execute('select config_id,uploaded_dt,config_text,config_sha1 from config where config_id = ?', (config_id,)))[0]
 
     @_conn_decorator
-    def create_db(self, conn=None):
-        c = conn.cursor()
+    def create_db(self, cursor=None, conn=None):
         
-        c.execute('''CREATE TABLE event_type (
+        
+        cursor.execute('''CREATE TABLE event_type (
         event_type_id INTEGER primary key,
         event_name TEXT, 
         last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
-        c.execute('''CREATE TABLE event (
+        cursor.execute('''CREATE TABLE event (
         event_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         event_string TEXT, 
@@ -390,14 +369,14 @@ class Dao:
         updated_dt TIMESTAMP 
         )''' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.all) )
     
-        c.execute('''CREATE TABLE task (
+        cursor.execute('''CREATE TABLE task (
         task_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         task_name TEXT,
         last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
-        c.execute('''CREATE TABLE event_task (
+        cursor.execute('''CREATE TABLE event_task (
         event_task_id INTEGER primary key,
         event_id INTEGER references event(event_id),
         task_id INTEGER references task(task_id),
@@ -410,13 +389,13 @@ class Dao:
         )'''% ( event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all),  
                 event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all) ) )
    
-        c.execute('''CREATE TABLE event_task_prereq (
+        cursor.execute('''CREATE TABLE event_task_prereq (
         prereq_id INTEGER primary key,
         before_task_id INTEGER references event_task(event_task_id ),
         event_task_id INTEGER references event_task(event_task_id )
         )''' )
         
-        c.execute('''CREATE TABLE artifact (
+        cursor.execute('''CREATE TABLE artifact (
         artifact_id INTEGER primary key,
         event_task_id INTEGER references event_task(event_task_id),
         run INTEGER not null,
@@ -425,14 +404,14 @@ class Dao:
         stored_dt TIMESTAMP
         )''')
         
-        c.execute('''CREATE TABLE artifact_score (
+        cursor.execute('''CREATE TABLE artifact_score (
         artifact_score_id INTEGER primary key,
         artifact_id INTEGER references artifact(artifact_id),
         score INTEGER,
         updated_dt TIMESTAMP
         )''')
         
-        c.execute('''CREATE TABLE generator (
+        cursor.execute('''CREATE TABLE generator (
         generator_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         generator_name TEXT, 
@@ -441,26 +420,26 @@ class Dao:
         last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
-        c.execute('''CREATE TABLE config (
+        cursor.execute('''CREATE TABLE config (
         config_id INTEGER primary key,
         uploaded_dt TIMESTAMP,
         config_text TEXT,
         config_sha1 TEXT
         )''')
     
-        c.execute('''CREATE TABLE global_variables (
+        cursor.execute('''CREATE TABLE global_variables (
         global_var_id INTEGER primary key,
         key TEXT unique not null,
         value TEXT 
         )''')
 
-        c.execute('''CREATE TABLE settings (
+        cursor.execute('''CREATE TABLE settings (
         settings_id INTEGER primary key CHECK( settings_id in (1) ) default 1,
         current_config_id INTEGER null references config(config_id) default null,
         last_changed_dt TIMESTAMP default CURRENT_TIMESTAMP
         )''')
         # Save (commit) the changes
-        c.execute('insert into settings (settings_id) values (1)')
+        cursor.execute('insert into settings (settings_id) values (1)')
         #
         conn.commit()
     
