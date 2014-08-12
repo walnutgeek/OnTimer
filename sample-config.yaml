@@ -36,20 +36,20 @@ events:
         wait_final_stage: true
     tasks:
       - name: start
-        cmd: runipy {ipy_path}/start.ipynb --html start.html 
+        cmd: boss --bs 9 
       - name: branch1
         depends_on: [start]
-        cmd: runipy {ipy_path}/branch1.ipynb --html branch1.html 
+        cmd: boss --bs 3 
       - name: branch2
         depends_on: [start]
-        cmd: runipy {ipy_path}/branch2.ipynb --html branch2.html 
+        cmd: boss
       - name: join1
         depends_on: [branch1, branch2] 
-        cmd: runipy {ipy_path}/join.ipynb --html join.html 
+        cmd: boss --bs 4 
       - name: join2
         depends_on: [join1, branch3] 
-        cmd: runipy {ipy_path}/join2.ipynb --html join2.html 
+        cmd: boss --bs 7
       - name: branch3
         depends_on: [branch2] 
-        cmd: runipy {ipy_path}/branch3.ipynb --html branch3.html 
+        cmd: boss --bs 6
              
