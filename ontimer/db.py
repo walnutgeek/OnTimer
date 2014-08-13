@@ -3,16 +3,18 @@ import datetime
 import sqlite3
 import os
 from . import event
+import collections
 
 default_filename = '.ontimer'
 
 _TBL = 0
 _PK  = 1
-#          Table(_TBL)         PKey(_PK)
-_TYPE =   'event_type',        'event_type_id'
-_EVENT =  'event',             'event_id'
-_TASK =   'event_task',        'event_task_id'
-_PREREQ = 'event_task_prereq', 'prereq_id'
+#          Table(_TBL)          PKey(_PK)
+_TYPE =    'event_type',        'event_type_id'
+_EVENT =   'event',             'event_id'
+_TASK =    'event_task',        'event_task_id'
+_PREREQ =  'event_task_prereq', 'prereq_id'
+_TASKDEF = 'task',              'task_id'
 
 def _conn_decorator(f):
     def magic(self, *args, **kwargs):
@@ -33,7 +35,7 @@ def _conn_decorator(f):
 def _fetchAllRecords(cursor, result):
     return list({col[0]:v[i] for (i, col) in enumerate(cursor.description)} for v in result)
 
-def _prepareUpdateVars(template, data ):
+def _assignments(template, data ):
     assignments = []
     for key in template:
         dirty_key = '_' + key 
@@ -43,10 +45,28 @@ def _prepareUpdateVars(template, data ):
         raise ValueError("Have nothing to update: %r", data)
     return ', '.join(assignments)
 
+def _conditions(template, data ):
+    conditions = ['%s = :%s' % (key,key) for key in template if key in data]
+    if not(conditions):
+        raise ValueError("Have nothing to update: %r", data)
+    return ', '.join(conditions)
+
+def _args(args): return args[0] if 1 == len(args) and isinstance(args[0], collections.Iterable) else args
+
+def _selectors( *args ):
+    tables_keys = _args(args)
+    return  ', '.join( map( lambda t: t[_TBL] + '.*',tables_keys) )
+
+def _joins ( *args ): 
+    tables_keys = _args(args)
+    return ' and '.join('%s.%s = %s.%s' % (tables_keys[i + 1][0], tk[1], tk[0], tk[1]) for (i, tk) in enumerate(tables_keys[:-1]))
+
+def _froms ( *args ): 
+    tables_keys = _args(args)
+    return ', '.join(map(lambda t:t[_TBL], tables_keys))
+
 def _generate_join(tables_keys, selectors, where = ''):
-    froms = ', '.join(map(lambda t:t[_TBL], tables_keys))
-    joins = ' and '.join('%s.%s = %s.%s' % (tables_keys[i + 1][0], tk[1], tk[0], tk[1]) for (i, tk) in enumerate(tables_keys[:-1]))
-    return 'select %s from %s where %s %s' % (selectors, froms, joins, where)
+    return 'select %s from %s where %s %s' % (selectors, _froms(tables_keys), _joins(tables_keys), where)
 
 class Dao:
     def __init__(self, root, filename = default_filename):
@@ -58,7 +78,6 @@ class Dao:
      
     def exists(self):
         return os.path.exists(self.file())
-    
 
     def connect(self):
         conn = sqlite3.connect(self.file())
@@ -79,12 +98,9 @@ class Dao:
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
         return r
 
-
-
     @_conn_decorator
     def tree_query(self, tables_keys, accdict_names, where='', customize = None, cursor=None, conn=None):
-        selectors = ', '.join( map( lambda t: t[_TBL] + '.*',tables_keys) )
-        query_result = list(cursor.execute(_generate_join(tables_keys, selectors, where)) )
+        query_result = list(cursor.execute(_generate_join(tables_keys, _selectors(tables_keys), where)) )
         result_with_colnames = map( lambda v: [ (col[0], v[i]) for i,col in enumerate(cursor.description) ], query_result )
         topdict={}
         for r in result_with_colnames:
@@ -161,7 +177,7 @@ class Dao:
 
     @_conn_decorator
     def update_event(self, event, cursor=None, conn=None):
-        set_vars = _prepareUpdateVars([
+        set_vars = _assignments([
               'event_status',
               'finished_dt',
               'eta_dt',
@@ -183,15 +199,13 @@ class Dao:
      
     @_conn_decorator
     def update_task(self, task, cursor=None, conn=None):
-        set_vars = _prepareUpdateVars([
+        set_vars = _assignments([
               'task_status',
               'run_count',
               'task_state',
               'last_run_outcome',
               'run_at_dt',
               ],task)
-        if not(cursor):
-            cursor = conn.cursor()
         newtask = dict(task)
         newtask.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute('''update event_task set 
@@ -349,8 +363,6 @@ class Dao:
 
     @_conn_decorator
     def create_db(self, cursor=None, conn=None):
-        
-        
         cursor.execute('''CREATE TABLE event_type (
         event_type_id INTEGER primary key,
         event_name TEXT, 
