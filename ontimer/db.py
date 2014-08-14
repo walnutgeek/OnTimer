@@ -32,24 +32,25 @@ def _conn_decorator(f):
                 conn.close()
     return magic
 
-def _fetchAllRecords(cursor, result):
-    return list({col[0]:v[i] for (i, col) in enumerate(cursor.description)} for v in result)
+def _fetch_all(cursor, result = None, query=None):
+    if query:
+        cursor.execute(query)
+    if not(result):
+        result = cursor.fetchall()
+    header=list(cursor.description)
+    return list({col[0]:v[i] for (i, col) in enumerate(header)} for v in result)
 
-def _assignments(template, data ):
-    assignments = []
-    for key in template:
-        dirty_key = '_' + key 
-        if dirty_key in data:
-            assignments.append('%s = :%s' % (key,dirty_key) )
+def _assignments(template, data, whine_if_empty=True ):
+    assignments = [ key +' = :_' + key for key in template if '_' + key in data]
     if not(assignments):
         raise ValueError("Have nothing to update: %r", data)
     return ', '.join(assignments)
 
-def _conditions(template, data ):
+def _conditions(template, data , whine_if_empty=True):
     conditions = ['%s = :%s' % (key,key) for key in template if key in data]
-    if not(conditions):
-        raise ValueError("Have nothing to update: %r", data)
-    return ', '.join(conditions)
+    if whine_if_empty and not(conditions):
+        raise ValueError("Have nothing to constraint it on: %r", data)
+    return ' and '.join(conditions)
 
 def _args(args): return args[0] if 1 == len(args) and isinstance(args[0], collections.Iterable) else args
 
@@ -65,8 +66,37 @@ def _froms ( *args ):
     tables_keys = _args(args)
     return ', '.join(map(lambda t:t[_TBL], tables_keys))
 
-def _generate_join(tables_keys, selectors, where = ''):
+def _simple_join(tables_keys, selectors, where = ''):
     return 'select %s from %s where %s %s' % (selectors, _froms(tables_keys), _joins(tables_keys), where)
+
+def _tree_query(cursor, tables_keys, accdict_names, where='', customize = None):
+    query_result = list(cursor.execute(_simple_join(tables_keys, _selectors(tables_keys), where)) )
+    result_with_colnames = map( lambda v: [ (col[0], v[i]) for i,col in enumerate(cursor.description) ], query_result )
+    topdict={}
+    for r in result_with_colnames:
+        i = -1  
+        groups=[]  
+        for v in r:
+            if i+1 < len(tables_keys) and tables_keys[i+1][_PK] == v[0]:
+                groups.append({})
+                i += 1
+            if i >= 0 :
+                groups[i][v[0]] = v[1]
+        curdict=topdict
+        for i in range(len(groups)):
+            g_key_val=groups[i][tables_keys[i][_PK]]
+            if g_key_val in curdict:
+                if i < len(accdict_names):
+                    groups[i] = curdict[g_key_val]
+                    curdict=groups[i][accdict_names[i]]
+            else:
+                curdict[g_key_val]=groups[i]
+                if i < len(accdict_names):
+                    curdict={}
+                    groups[i][accdict_names[i]]=curdict
+        if customize:
+            customize(groups,topdict)
+    return topdict
 
 class Dao:
     def __init__(self, root, filename = default_filename):
@@ -99,53 +129,21 @@ class Dao:
         return r
 
     @_conn_decorator
-    def tree_query(self, tables_keys, accdict_names, where='', customize = None, cursor=None, conn=None):
-        query_result = list(cursor.execute(_generate_join(tables_keys, _selectors(tables_keys), where)) )
-        result_with_colnames = map( lambda v: [ (col[0], v[i]) for i,col in enumerate(cursor.description) ], query_result )
-        topdict={}
-        for r in result_with_colnames:
-            i = -1  
-            groups=[]  
-            for v in r:
-                if i+1 < len(tables_keys) and tables_keys[i+1][_PK] == v[0]:
-                    groups.append({})
-                    i += 1
-                if i >= 0 :
-                    groups[i][v[0]] = v[1]
-            curdict=topdict
-            for i in range(len(groups)):
-                g_key_val=groups[i][tables_keys[i][_PK]]
-                if g_key_val in curdict:
-                    if i < len(accdict_names):
-                        groups[i] = curdict[g_key_val]
-                        curdict=groups[i][accdict_names[i]]
-                else:
-                    curdict[g_key_val]=groups[i]
-                    if i < len(accdict_names):
-                        curdict={}
-                        groups[i][accdict_names[i]]=curdict
-            if customize:
-                customize(groups,topdict)
-        return topdict
-
-    
-    @_conn_decorator
     def get_active_events(self, cursor = None, conn=None):
         where = 'and event.event_status in (%s)' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
-        alltasks={}
-        allevents={}
-        def populate_alltasks(groups,topdict):
-            allevents[groups[1][_EVENT[_PK]]]=groups[1]
-            alltasks[groups[2][_TASK[_PK]]]=groups[2]
-        alltypes = self.tree_query((_TYPE, _EVENT, _TASK), ('events', 'tasks'), where, customize=populate_alltasks, cursor=cursor, conn=conn)
-        dependenies = cursor.execute(_generate_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ))
+        tasks = _fetch_all(cursor, query ="select %s from %s where %s and %s %s" % (
+            _selectors(_TYPE, _EVENT, _TASKDEF, _TASK),
+            _froms(_TYPE, _EVENT, _TASK, _TASKDEF),
+            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKDEF, _TASK), where))
+        alltasks={ task['event_task_id'] : task for task in tasks }
+        dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ))
         for d in dependenies:
             task=alltasks[d[1]]
             if 'depend_on' in task:
                 task['depend_on'].append(d[0])
             else:
                 task['depend_on'] = [d[0]]
-        return alltypes, allevents, alltasks
+        return tasks, alltasks
 
          
     @_conn_decorator
@@ -158,12 +156,12 @@ class Dao:
             and p.before_task_id = bt.event_task_id and bt.task_status in (%s) )
             ''' % (event.joinEnumsIndices(event.TaskStatus,event.MetaStates.ready),
                    event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )    
-        return _fetchAllRecords(cursor, cursor.execute(q,(datetime.datetime.utcnow(),)) )
+        return _fetch_all(cursor, cursor.execute(q,(datetime.datetime.utcnow(),)) )
 
     @_conn_decorator
     def get_tasks_of_status(self, status, cursor=None, conn=None):
         q = 'select et.* from event_task et  where et.task_status = ?'    
-        return _fetchAllRecords(cursor, cursor.execute(q,(status,)) )
+        return _fetch_all(cursor, cursor.execute(q,(status,)) )
 
     @_conn_decorator
     def get_events_to_be_completed(self, cursor=None, conn=None):
@@ -173,7 +171,7 @@ class Dao:
         where e.event_id = et.event_id and et.task_status in (%s) )
         ''' % (event.joinEnumsIndices(event.EventStatus,event.MetaStates.active),
               event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )     
-        return _fetchAllRecords(cursor, cursor.execute(q) )
+        return _fetch_all(cursor, cursor.execute(q) )
 
     @_conn_decorator
     def update_event(self, event, cursor=None, conn=None):
@@ -227,7 +225,7 @@ class Dao:
         where et.event_task_id = :event_task_id''', task))
         if len(result)!=1:
             raise ValueError('expect to get one instead of %d record for %r ' % (len(result),task) )
-        return _fetchAllRecords( cursor, result )[0]
+        return _fetch_all( cursor, result )[0]
         
     @_conn_decorator
     def store_artifact(self, artifact, cursor=None, conn=None):

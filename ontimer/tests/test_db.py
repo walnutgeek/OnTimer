@@ -95,8 +95,9 @@ def test_get_tasks_to_run():
     t2 = r[0]
     et_id2 = t2['event_task_id']
     eq_(2,et_id2)
-    types,events,tasks=dao.get_active_events()
-    ev=events[1]
+    tasks,tasksdict=dao.get_active_events()
+    ev = tasks[1]
+#     ev=events[1]
     ev['_event_status']=event.EventStatus.fail
     eq_(True,dao.update_event(ev))
     dao.load_task({'event_task_id':et_id2})

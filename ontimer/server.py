@@ -94,7 +94,6 @@ class State:
         self.config = self.dao.apply_config()
         self.tasks = None
         self.events = None
-        self.types = None
         self.json = None
         self.runs = []
         event.global_config.update(self.dao.get_global_vars())
@@ -113,11 +112,10 @@ class State:
             ev.update( _event_status = event.EventStatus.success, _finished_dt = datetime.datetime.utcnow() )
             self.dao.update_event(ev)
             
-        types,events,tasks = self.dao.get_active_events()
-        json_data = json.dumps(types)
+        tasks,taskdict = self.dao.get_active_events()
+        json_data = json.dumps(tasks)
         if json_data != self.json:
-            self.types = types
-            self.events = events
+            self.taskdict = taskdict
             self.tasks = tasks
             self.json = json_data
             self.pushAll()
