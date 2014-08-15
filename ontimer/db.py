@@ -297,6 +297,8 @@ class Dao:
             cursor.execute("insert into config (uploaded_dt,config_text,config_sha1) values (CURRENT_TIMESTAMP,?,?)",(config_text,sha1))
             cursor.execute("update settings set current_config_id = ?, last_changed_dt=CURRENT_TIMESTAMP",(cursor.lastrowid,))
             conn.commit()
+            return True
+        return False
 
     @_conn_decorator
     def apply_config(self,cursor=None,conn=None):
@@ -448,6 +450,7 @@ class Dao:
         current_config_id INTEGER null references config(config_id) default null,
         last_changed_dt TIMESTAMP default CURRENT_TIMESTAMP
         )''')
+        
         # Save (commit) the changes
         cursor.execute('insert into settings (settings_id) values (1)')
         #

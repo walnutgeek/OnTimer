@@ -6,7 +6,21 @@ import os
 from .db import Dao
 from . import server
 from . import event
+import logging
 
+log = logging.getLogger(__name__)
+
+def set_logging(rootdir):
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    error_handler = logging.FileHandler( os.path.join(rootdir, "debug.log"), "a" )
+    error_handler.setLevel(logging.DEBUG)
+    error_handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(message)s"))
+    root = logging.getLogger()
+    root.addHandler(console_handler)
+    root.addHandler(error_handler)
+    root.setLevel(logging.DEBUG)
 
 def warning(*objs):
     print("WARNING: ", *objs, file=sys.stderr)
@@ -18,13 +32,13 @@ def main():
             raise ValueError("config has to be defined")
         config_text=open(args.config,"r").read()
         dao.ensure_db()
-        dao.set_config(config_text)
-        print ('Loaded ' + args.config)
+        if dao.set_config(config_text) :
+            log.info('new config loaded:%s' % args.config)
         
     def run_server(args):
         if not(dao.exists()) or args.config :
             set_conf(args)
-        print ('server', args)
+        log.debug('%r %r' % ('server', args) )
         server.run_server(dao)
 
     def get_conf(args):
@@ -44,6 +58,7 @@ def main():
     args = parser.parse_args()
     abs_root = os.path.abspath(args.root)
     event.global_config.update(ontimer_root =abs_root)
+    set_logging(abs_root)
     dao=Dao(abs_root)
     try:
         args.func(args)
