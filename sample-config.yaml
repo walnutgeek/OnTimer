@@ -39,17 +39,17 @@ events:
         cmd: boss --bs 9 
       - name: branch1
         depends_on: [start]
-        cmd: boss --bs 3 
+        cmd: boss --bs 23 
       - name: branch2
         depends_on: [start]
-        cmd: boss
+        cmd: boss --bs 12
       - name: join1
         depends_on: [branch1, branch2] 
-        cmd: boss --bs 4 
+        cmd: boss 
       - name: join2
         depends_on: [join1, branch3] 
         cmd: boss --bs 7
       - name: branch3
         depends_on: [branch2] 
-        cmd: boss --bs 6
+        cmd: boss --bs 36
              
