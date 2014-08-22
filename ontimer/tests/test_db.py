@@ -58,7 +58,7 @@ def test_emit():
     dao.emit_event(ev)
     
 def test_active_events():
-    dao.get_active_events()
+    dao.get_event_tasks()
     
 def test_get_tasks_to_run():
     r=dao.get_tasks_to_run()
@@ -95,7 +95,7 @@ def test_get_tasks_to_run():
     t2 = r[0]
     et_id2 = t2['event_task_id']
     eq_(2,et_id2)
-    tasks,tasksdict=dao.get_active_events()
+    tasks,tasksdict=dao.get_event_tasks()
     ev = tasks[1]
 #     ev=events[1]
     ev['_event_status']=event.EventStatus.fail

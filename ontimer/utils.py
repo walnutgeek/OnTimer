@@ -26,6 +26,9 @@ def toDateTime(s,formats=all_formats):
             pass
     raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
 
+def utc_adjusted(**kwargs):
+    ''' return utc adjusted '''
+    return datetime.datetime.utcnow()+datetime.timedelta(**kwargs)
 
 def quict(**kwargs): 
     ''' quick way to create dict() '''

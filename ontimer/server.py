@@ -119,8 +119,9 @@ class State:
         self.clients = []
         self.config = self.dao.apply_config()
         self.tasks = None
-        self.events = None
-        self.json = None
+        self.taskdict = None
+        self.meta_json = json.dumps({ 'meta' : event.get_meta()} )
+        self.json = {}
         self.runs = []
         event.global_config.update(self.dao.get_global_vars())
     
@@ -138,8 +139,8 @@ class State:
             ev.update( _event_status = event.EventStatus.success, _finished_dt = datetime.datetime.utcnow() )
             self.dao.update_event(ev)
             
-        tasks,taskdict = self.dao.get_active_events()
-        json_data = json.dumps(tasks)
+        tasks,taskdict = self.dao.get_event_tasks()
+        json_data = json.dumps({ 'get_event_tasks' : tasks })
         if json_data != self.json:
             self.taskdict = taskdict
             self.tasks = tasks
@@ -149,16 +150,17 @@ class State:
     
     def pushAll(self):
         for client in self.clients:
-            self.pushToOne(client)
+            self.pushToOne(client,self.json)
             
-    def pushToOne(self,client):
-            if self.json:
-                client.write_message(self.json)        
+    def pushToOne(self,client,content):
+            if content:
+                client.write_message(content)        
 
     def addClient(self,client):
         if client not in self.clients:
             self.clients.append(client)
-            self.pushToOne(client)
+            self.pushToOne(client, self.meta_json)
+            self.pushToOne(client,self.json)
 
     def removeClient(self,client):
         if client in self.clients:
@@ -173,8 +175,14 @@ class IndexHandler(web.RequestHandler):
         self.render("web/index.html")
 
 class SocketHandler(websocket.WebSocketHandler):
+    
+    def __init__(self,*args,**kwargs):
+        self.user = None
+        websocket.WebSocketHandler.__init__(self,*args,**kwargs)
+        
     def open(self):
         state.addClient(self)
+    
 
     def on_close(self):
         state.removeClient(self)

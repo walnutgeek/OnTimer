@@ -2,6 +2,7 @@ import hashlib
 import datetime
 import sqlite3
 import os
+from . import utils
 from . import event
 import collections
 
@@ -124,19 +125,23 @@ class Dao:
                 self.create_db()
 
     @_conn_decorator
-    def query(self, q, params=None, cursor=None, conn=None):
+    def query(self, q, params = None, cursor=None, conn=None):
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
         return r
 
     @_conn_decorator
-    def get_active_events(self, cursor = None, conn=None):
-        where = 'and event.event_status in (%s)' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
-        tasks = _fetch_all(cursor, query ="select %s from %s where %s and %s %s" % (
+    def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
+        if cutoff is None:
+            cutoff = utils.utc_adjusted(hours=-6) 
+        where = 'and (event.event_status in (%s) or event.started_dt > ?)' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
+        query ="select %s from %s where %s and %s %s" % (
             _selectors(_TYPE, _EVENT, _TASKDEF, _TASK),
             _froms(_TYPE, _EVENT, _TASK, _TASKDEF),
-            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKDEF, _TASK), where))
-        alltasks={ task['event_task_id'] : task for task in tasks }
-        dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ))
+            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKDEF, _TASK), where)
+        cursor.execute(query,(cutoff,))
+        tasks = _fetch_all(cursor)
+        alltasks = { task['event_task_id'] : task for task in tasks }
+        dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ),(cutoff,))
         for d in dependenies:
             task=alltasks[d[1]]
             if 'depend_on' in task:
@@ -144,7 +149,6 @@ class Dao:
             else:
                 task['depend_on'] = [d[0]]
         return tasks, alltasks
-
          
     @_conn_decorator
     def get_tasks_to_run(self, cursor=None, conn=None):

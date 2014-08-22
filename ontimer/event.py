@@ -85,11 +85,21 @@ class VarTypes(Enum):
     def toStr(self, v):
         return None if v is None else self.value[1](v) 
 
+def enum_to_map(enum):
+    return { e.name: e.value for e in list(enum)} 
+
+def get_meta():
+    return {  'MetaStates' : enum_to_map(MetaStates),
+            'EventStatus' : enum_to_map(EventStatus),
+            'TaskStatus' : enum_to_map(TaskStatus) }
+            
+
 class Config:
     def __init__(self,s):
         y = yaml.load(s)
         self.events = [EventType(e) for e in y.pop('events') ]
         self.globals = y.pop('globals')
+
         if len(y) > 0:
             raise ValueError("Not supported property: %s" % str(y))
         
@@ -215,3 +225,5 @@ class EventTask:
     def cmd(self): return self.task.cmd.format(**self._format_vars())
     def state(self): return  json.dumps({'cmd':self.cmd()} )
         
+
+

@@ -9,8 +9,32 @@
     <link href="js/bootstrap-responsive.css" rel="stylesheet">
 	<link href="js/prettify.css" rel="stylesheet">
 	<script src="js/bootstrap.min.js"></script>
+	<script src="d3/d3.min.js"></script>
 
-<style>
+<style type="text/css">
+	table.gridtable {
+		font-family: verdana,arial,sans-serif;
+		font-size:11px;
+		color:#333333;
+		border-width: 1px;
+		border-color: #666666;
+		border-collapse: collapse;
+	}
+	table.gridtable thead th {
+		border-width: 1px;
+		padding: 8px;
+		border-style: solid;
+		border-color: #666666;
+		background-color: #dedede;
+	}
+	table.gridtable tbody td {
+		border-width: 1px;
+		padding: 8px;
+		border-style: solid;
+		border-color: #666666;
+		background-color: #ffffff;
+	}
+
 	#page {min-height:600px;}
 	.package {margin-left:10px;padding:3px;border-radius:2px;margin-top:2px;}
 	.header {cursor:pointer;}
@@ -45,13 +69,55 @@
       WebSocket status : <span id="message"></span>
     <hr>
     <h3>Events</h3>
-      <div id="data_container">
-      content to replace
+      <div id="data_container" >
       </div>
-
   </div>
   <script>
     $(function(){
+    var table = d3.select("#data_container").append("table").attr('class','gridtable');
+    thead = table.append("thead");
+	thead_tr = thead.append("tr");
+    tbody = table.append("tbody");
+
+    var globals = {};
+    function process_known_content(json){
+      if(json.get_event_tasks){
+        update_table(json.get_event_tasks,'event_task_id')
+		return true;
+      }
+      if(json.meta){
+        globals.meta = json.meta;
+        return true;
+      }
+        return false;
+    }
+    
+    function update_table(data, key){
+	     var columns = data && data.length > 0 ? Object.keys(data[0]) : [] ;
+	     // append the header row
+	     ths = thead_tr.selectAll("th").data(columns);
+	     ths.enter().append("th").text(function(column) { return column; });
+	     ths.exit().remove();
+	     
+	     // create a row for each object in the data
+	     var rows = tbody.selectAll("tr").data(data, function(d){return d[key];} )
+	     rows.enter().append("tr");
+		 rows.exit().remove();    
+	
+	     // create a cell in each row for each column
+	     var cells = rows.selectAll("td").data(
+	         function(row) { 
+	           return columns.map(
+	               function(column) { 
+	                 return {column: column, value: row[column]};
+	             });
+	         });
+	      cells.enter().append("td").text(function(d) { return d.value; });
+	      cells.text(function(d) { return d.value; });
+	      cells.exit().remove();    
+    }
+
+
     var $container = $('#data_container');
     var ws = new WebSocket('ws://localhost:9753/ws');
     var $message = $('#message');
@@ -67,7 +133,11 @@
       setTimeout(function(){$message.text('open') }, 2000)
       
       var json = JSON.parse(ev.data)
-	  visualize(json)
+	  
+      if(!process_known_content(json)){
+        // content is unknown just output json
+        visualize(json)
+      }
     };
     ws.onclose = function(ev){
       $message.attr("class", 'label label-important');

@@ -2,6 +2,7 @@
 from nose.tools import eq_
 from .. import event
 import datetime
+import json
 from collections import defaultdict
 
 def test_yaml():
@@ -36,6 +37,9 @@ def test_joinEnumsIndices():
     eq_("1,2,3,4,11,101,102",event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all))
     eq_("3,101,102",event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all))
     eq_(event.TaskStatus.success,event.RunOutcome.success)
+
+def test_get_meta():
+    eq_('{"TaskStatus": {"scheduled": 1, "retry": 4, "success": 101, "skip": 102, "paused": 11, "running": 2, "fail": 3}, "EventStatus": {"active": 1, "fail": 3, "paused": 11, "success": 101, "skip": 102}, "MetaStates": {"active": 2, "ready": 3, "all": 0, "final": 1}}', json.dumps(event.get_meta()))
 
 def test_enums():
     eq_(event.TaskStatus.success,event.findEnum(event.TaskStatus, 'success'))
