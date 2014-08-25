@@ -139,13 +139,13 @@ class State:
             ev.update( _event_status = event.EventStatus.success, _finished_dt = datetime.datetime.utcnow() )
             self.dao.update_event(ev)
             
-        tasks,taskdict = self.dao.get_event_tasks()
-        json_data = json.dumps({ 'get_event_tasks' : tasks })
+        events,taskdict = self.dao.get_event_tasks()
+        json_data = json.dumps({ 'get_event_tasks' : events })
         if json_data != self.json:
             self.taskdict = taskdict
-            self.tasks = tasks
+            self.events = events
             self.json = json_data
-            log.debug( "sending:%s" %  self.json ) 
+            #log.debug( "sending:%s" %  self.json ) 
             self.pushAll()
     
     def pushAll(self):

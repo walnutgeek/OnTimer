@@ -17,7 +17,8 @@ if os.path.isdir(test_dir):
     shutil.rmtree(test_dir)
 os.mkdir(test_dir)
 
-from ontimer.db import Dao
+from .. import db
+from ..db import Dao
 dao = Dao(test_dir,filename="test.db")
 eq_(1, dao.query('pragma foreign_keys')[0][0])
 dao.create_db()
@@ -95,13 +96,24 @@ def test_get_tasks_to_run():
     t2 = r[0]
     et_id2 = t2['event_task_id']
     eq_(2,et_id2)
-    tasks,tasksdict=dao.get_event_tasks()
-    ev = tasks[1]
+    events,tasksdict=dao.get_event_tasks()
+    eq_(1,len(events))
+    ev = events[0]
 #     ev=events[1]
     ev['_event_status']=event.EventStatus.fail
     eq_(True,dao.update_event(ev))
     dao.load_task({'event_task_id':et_id2})
     
  
-        
+def test__fetch_tree():
+    query_result = [[1,1,1],[1,2,1],[1,2,2],[1,2,1],[2,1,1],[3,1,2]]
+    query_columns = ['a','b','c']
+    eq_("[{'a': 1, 'bees': [{'b': 1, 'sees': [{'c': 1}]}, {'b': 2, 'sees': [{'c': 1}, {'c': 2}, {'c': 1}]}]}, "+
+         "{'a': 2, 'bees': [{'b': 1, 'sees': [{'c': 1}]}]}, " +
+         "{'a': 3, 'bees': [{'b': 1, 'sees': [{'c': 2}]}]}]",
+         '%r' % db._fetch_tree(None, ( ('b','bees'),('c','sees') ), 
+                                  query_columns =query_columns,
+                                  query_result = query_result ) )
+     
+       
 

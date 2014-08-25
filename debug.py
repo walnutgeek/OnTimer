@@ -4,7 +4,7 @@ import ontimer.event
 test_dbcreation()
 test_set_global_var()
 test_emit()
-tasks=dao.get_tasks_to_run()
+events,tasks=dao.get_event_tasks()
 
           
             

@@ -70,34 +70,47 @@ def _froms ( *args ):
 def _simple_join(tables_keys, selectors, where = ''):
     return 'select %s from %s where %s %s' % (selectors, _froms(tables_keys), _joins(tables_keys), where)
 
-def _tree_query(cursor, tables_keys, accdict_names, where='', customize = None):
-    query_result = list(cursor.execute(_simple_join(tables_keys, _selectors(tables_keys), where)) )
-    result_with_colnames = map( lambda v: [ (col[0], v[i]) for i,col in enumerate(cursor.description) ], query_result )
-    topdict={}
-    for r in result_with_colnames:
-        i = -1  
-        groups=[]  
-        for v in r:
-            if i+1 < len(tables_keys) and tables_keys[i+1][_PK] == v[0]:
+def _fetch_tree(cursor, key_attrib_pairs, query_result = None, query_columns = None):
+    ''' 
+    divide query results into sections by key (out of key attrib_pairs) and group by 
+    '''
+    query_result = query_result or cursor.fetchall()
+    if len(query_result) == 0:
+        return []
+    query_columns = query_columns or [ col[0]  for col in cursor.description ]
+    result_with_colnames = map( lambda v: [ (col, v[i]) for i,col in enumerate(query_columns) ], query_result )
+    group_list=[]
+    for row in result_with_colnames:
+        i = 0  
+        groups=[{}]  
+        for pair in row:
+            if i < len(key_attrib_pairs) and key_attrib_pairs[i][0] == pair[0]:
                 groups.append({})
                 i += 1
-            if i >= 0 :
-                groups[i][v[0]] = v[1]
-        curdict=topdict
-        for i in range(len(groups)):
-            g_key_val=groups[i][tables_keys[i][_PK]]
-            if g_key_val in curdict:
-                if i < len(accdict_names):
-                    groups[i] = curdict[g_key_val]
-                    curdict=groups[i][accdict_names[i]]
-            else:
-                curdict[g_key_val]=groups[i]
-                if i < len(accdict_names):
-                    curdict={}
-                    groups[i][accdict_names[i]]=curdict
-        if customize:
-            customize(groups,topdict)
-    return topdict
+            groups[i][pair[0]] = pair[1]
+        if len(groups) - 1 != len(key_attrib_pairs):
+            raise ValueError('cannot find all keys: %r in query columns: %r , come up with: %r' % (key_attrib_pairs,query_columns,groups) )
+        group_list.append(groups)
+    def group_by(grp_list, children_keys):
+        if len(children_keys)==0 :
+            return [ r[0] for r in grp_list]
+        regroup = []    
+        last_grp_idx = None
+        def build_group(start,end):
+            keys = children_keys[1:] 
+            group = grp_list[start][0]
+            regroup.append(group)
+            children = group_by([ grp_list[j][1:] for j in range(start, end) ],keys)
+            group[children_keys[0]] = children
+        for idx, rec in enumerate(grp_list):
+            if last_grp_idx is None :
+                last_grp_idx = idx
+            elif grp_list[idx][0] != grp_list[last_grp_idx][0]:
+                build_group(last_grp_idx, idx) 
+                last_grp_idx = idx
+        build_group(last_grp_idx, len(grp_list)) 
+        return regroup
+    return group_by(group_list,[pair[1] for pair in key_attrib_pairs])
 
 class Dao:
     def __init__(self, root, filename = default_filename):
@@ -131,16 +144,17 @@ class Dao:
 
     @_conn_decorator
     def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
-        if cutoff is None:
-            cutoff = utils.utc_adjusted(hours=-6) 
-        where = 'and (event.event_status in (%s) or event.started_dt > ?)' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
-        query ="select %s from %s where %s and %s %s" % (
-            _selectors(_TYPE, _EVENT, _TASKDEF, _TASK),
+        cutoff = cutoff or  utils.utc_adjusted(hours=-6) 
+        where = 'and (event.event_status in (%s) or event.started_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
+        query ="select %s from %s where %s and %s %s order by %s" % (
+            _selectors(_TYPE, _EVENT, _TASK, _TASKDEF),
             _froms(_TYPE, _EVENT, _TASK, _TASKDEF),
-            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKDEF, _TASK), where)
+            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKDEF, _TASK), where, 
+            'event.started_dt DESC, event.event_id, event_task.event_task_id')
         cursor.execute(query,(cutoff,))
-        tasks = _fetch_all(cursor)
-        alltasks = { task['event_task_id'] : task for task in tasks }
+        events = _fetch_tree(cursor,((_TASK[_PK],'tasks'),) )
+        tasks = [ t for e in events for t in e['tasks'] ]
+        alltasks = { task[_TASK[_PK]] : task for task in tasks }
         dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ),(cutoff,))
         for d in dependenies:
             task=alltasks[d[1]]
@@ -148,7 +162,7 @@ class Dao:
                 task['depend_on'].append(d[0])
             else:
                 task['depend_on'] = [d[0]]
-        return tasks, alltasks
+        return events, alltasks
          
     @_conn_decorator
     def get_tasks_to_run(self, cursor=None, conn=None):

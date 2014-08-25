@@ -34,6 +34,14 @@
 		border-color: #666666;
 		background-color: #ffffff;
 	}
+	table.gridtable tbody th {
+	    display:table-row;
+		border-width: 1px;
+		padding: 8px;
+		border-style: solid;
+		border-color: #666666;
+		background-color: #ffffff;
+	}
 
 	#page {min-height:600px;}
 	.package {margin-left:10px;padding:3px;border-radius:2px;margin-top:2px;}
@@ -71,18 +79,16 @@
     <h3>Events</h3>
       <div id="data_container" >
       </div>
+      <div id="debug" >
+      </div>
   </div>
   <script>
     $(function(){
-    var table = d3.select("#data_container").append("table").attr('class','gridtable');
-    thead = table.append("thead");
-	thead_tr = thead.append("tr");
-    tbody = table.append("tbody");
 
     var globals = {};
     function process_known_content(json){
       if(json.get_event_tasks){
-        update_table(json.get_event_tasks,'event_task_id')
+        update_event_table(json.get_event_tasks)
 		return true;
       }
       if(json.meta){
@@ -92,15 +98,27 @@
         return false;
     }
     
-    function update_table(data, key){
-	     var columns = data && data.length > 0 ? Object.keys(data[0]) : [] ;
+    var table = d3.select("#data_container").append("table").attr('class','gridtable');
+    thead = table.append("thead");
+	thead_tr = thead.append("tr");
+	 
+    function update_event_table(events){
+      
+	     var columns = ['task_name','run_at_dt','task_status','run_count','updated_dt']
+
+	     tbody = table.selectAll("tbody").data(events,function(d){return d['event_id']});
+	     tbody.enter().append("tbody");
+	     tbody.exit().remove();
+	     tbody.append("th").append('td').attr('colspan',columns.length).text(function(d){return d['event_string']})
+	     
+	     
 	     // append the header row
 	     ths = thead_tr.selectAll("th").data(columns);
 	     ths.enter().append("th").text(function(column) { return column; });
 	     ths.exit().remove();
 	     
 	     // create a row for each object in the data
-	     var rows = tbody.selectAll("tr").data(data, function(d){return d[key];} )
+	     var rows = tbody.selectAll("tr").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} )
 	     rows.enter().append("tr");
 		 rows.exit().remove();    
 	
@@ -118,7 +136,7 @@
     }
 
 
-    var $container = $('#data_container');
+    var $container = $('#debug');
     var ws = new WebSocket('ws://localhost:9753/ws');
     var $message = $('#message');
     ws.onopen = function(){
