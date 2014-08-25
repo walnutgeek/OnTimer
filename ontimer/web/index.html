@@ -89,7 +89,7 @@
     function process_known_content(json){
       if(json.get_event_tasks){
         update_event_table(json.get_event_tasks)
-		return true;
+		return false;
       }
       if(json.meta){
         globals.meta = json.meta;
@@ -107,9 +107,9 @@
 	     var columns = ['task_name','run_at_dt','task_status','run_count','updated_dt']
 
 	     tbody = table.selectAll("tbody").data(events,function(d){return d['event_id']});
-	     tbody.enter().append("tbody");
+	     tbody.enter().append("tbody").append("th");
 	     tbody.exit().remove();
-	     tbody.append("th").append('td').attr('colspan',columns.length).text(function(d){return d['event_string']})
+	     tbody.selectAll("th").attr('colspan',columns.length).text(function(d){return d['event_string']})
 	     
 	     
 	     // append the header row
