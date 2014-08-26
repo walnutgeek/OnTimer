@@ -118,7 +118,7 @@
       
 	     var columns = ['task_name','run_at_dt','task_status','run_count','updated_dt']
 
-	     tbody = table.selectAll("tbody").data(events,function(d){return d['event_id']});
+	     tbody = table.selectAll("tbody").data(events);
 	     tbody.enter().append("tbody").append("tr").attr("class","event_row").append('th');
 	     tbody.exit().remove();
 	     tbody.selectAll(".event_row th").attr('colspan',columns.length).text(function(d){return d['event_string']})
