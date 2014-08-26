@@ -39,6 +39,7 @@
 		padding: 2px;
 		border-style: solid;
 		border-color: #666666;
+		background-color: #dedede;
 	}
 
 	#page {min-height:600px;}
@@ -116,7 +117,7 @@
 	 
     function update_event_table(events){
       
-	     var columns = ['task_name','run_at_dt','task_status','run_count','updated_dt']
+	     var columns = ['event_task_id','task_name','run_at_dt','task_status','run_count','updated_dt','depend_on']
 
 	     tbody = table.selectAll("tbody").data(events);
 	     tbody.enter().append("tbody").append("tr").attr("class","event_row").append('th');
@@ -132,7 +133,7 @@
 	     // create a row for each object in the data
 	     var rows = tbody.selectAll(".task_row").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} );
 	     rows.enter().append("tr").attr("class","task_row").on("click",task_click);
-	     rows.style('background-color',function(t) { return globals.selection[t.event_task_id] ?  "#3182bd" : "#ffffff" ; });
+	     rows.style('background-color',function(t) { return globals.selection[t.event_task_id] ?  "#ffffaa" : "#ffffff" ; });
 		 rows.exit().remove();
 		 
     	    
