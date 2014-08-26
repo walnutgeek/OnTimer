@@ -20,23 +20,24 @@
 		border-color: #666666;
 		border-collapse: collapse;
 	}
-	table.gridtable thead th {
+	table.gridtable thead tr th {
 		border-width: 1px;
-		padding: 8px;
+		padding: 2px;
 		border-style: solid;
 		border-color: #666666;
 		background-color: #dedede;
 	}
-	table.gridtable tbody td {
+	table.gridtable tbody tr td {
 		border-width: 1px;
-		padding: 8px;
+		padding: 2px;
 		border-style: solid;
 		border-color: #666666;
 	}
-	table.gridtable tbody th {
-	    display:table-row;
+	table.gridtable tbody tr th {
 		border-width: 1px;
-		padding: 8px;
+		text-align: left;
+		padding: 2px;
+		border-style: solid;
 		border-color: #666666;
 	}
 
@@ -118,9 +119,9 @@
 	     var columns = ['task_name','run_at_dt','task_status','run_count','updated_dt']
 
 	     tbody = table.selectAll("tbody").data(events,function(d){return d['event_id']});
-	     tbody.enter().append("tbody").append("th");
+	     tbody.enter().append("tbody").append("tr").attr("class","event_row").append('th');
 	     tbody.exit().remove();
-	     tbody.selectAll("th").attr('colspan',columns.length).text(function(d){return d['event_string']})
+	     tbody.selectAll(".event_row th").attr('colspan',columns.length).text(function(d){return d['event_string']})
 	     
 	     
 	     // append the header row
@@ -129,12 +130,11 @@
 	     ths.exit().remove();
 	     
 	     // create a row for each object in the data
-	     var rows = tbody.selectAll("tr").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} );
-	     rows.enter().append("tr").on("click",task_click);
+	     var rows = tbody.selectAll(".task_row").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} );
+	     rows.enter().append("tr").attr("class","task_row").on("click",task_click);
 	     rows.style('background-color',function(t) { return globals.selection[t.event_task_id] ?  "#3182bd" : "#ffffff" ; });
 		 rows.exit().remove();
 		 
-    	 console.log('update');
     	    
 		 function task_click(t){
 		   if(globals.selection[t.event_task_id]){
