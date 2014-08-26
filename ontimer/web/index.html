@@ -32,15 +32,12 @@
 		padding: 8px;
 		border-style: solid;
 		border-color: #666666;
-		background-color: #ffffff;
 	}
 	table.gridtable tbody th {
 	    display:table-row;
 		border-width: 1px;
 		padding: 8px;
-		border-style: solid;
 		border-color: #666666;
-		background-color: #ffffff;
 	}
 
 	#page {min-height:600px;}
@@ -88,8 +85,9 @@
     var globals = {};
     function process_known_content(json){
       if(json.get_event_tasks){
+        globals.get_event_tasks=json.get_event_tasks
         update_event_table(json.get_event_tasks)
-		return false;
+		return true;
       }
       if(json.meta){
         globals.meta = json.meta;
@@ -118,10 +116,19 @@
 	     ths.exit().remove();
 	     
 	     // create a row for each object in the data
-	     var rows = tbody.selectAll("tr").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} )
-	     rows.enter().append("tr");
-		 rows.exit().remove();    
-	
+	     var rows = tbody.selectAll("tr").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} );
+	     rows.enter().append("tr").on("click",task_click);
+	     rows.style('background-color',function(t) { return t.selected ?  "#3182bd" : "#ffffff" ; });
+		 rows.exit().remove();
+		 
+    	 console.log('update');
+    	    
+		 function task_click(t){
+    	    console.log('click');
+		    t.selected = !t.selected ;
+		    update_event_table(globals.get_event_tasks);
+		 }
+		 
 	     // create a cell in each row for each column
 	     var cells = rows.selectAll("td").data(
 	         function(row) { 
