@@ -175,12 +175,12 @@ def joinEventString(it):
     return ','.join((s.replace('\\','\\\\').replace(',','\\,') for s in it))
 
 class Event:
-    def __init__(self, event_type,data_tuple, generator=None, started_dt=datetime.datetime.utcnow(), eta_dt=None):
+    def __init__(self, event_type,data_tuple, generator=None, started_dt=None, eta_dt=None):
         self.type = event_type
         self.data = data_tuple
         self.status = EventStatus.active 
         self.generator = generator
-        self.started_dt = started_dt
+        self.started_dt = started_dt or datetime.datetime.utcnow()
         self.eta_dt = eta_dt
         self.event_tasks = None
 
@@ -208,11 +208,11 @@ class Event:
         return dict( ( (vd.name, self.data[i]) for i, vd in enumerate(self.type.vars) ) )
     
 class EventTask:
-    def __init__(self,event,task,run_at_dt=datetime.datetime.utcnow()):
+    def __init__(self,event,task,run_at_dt=None):
         self.event = event
         self.task = task
         self.status = TaskStatus.scheduled
-        self.run_at_dt = run_at_dt
+        self.run_at_dt = run_at_dt or datetime.datetime.utcnow()
         
     def task_id(self):return self.task.task_id
     def task_name(self):return self.task.name
