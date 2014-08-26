@@ -82,9 +82,22 @@
   <script>
     $(function(){
 
-    var globals = {};
+    var globals = {selection:{}};
     function process_known_content(json){
       if(json.get_event_tasks){
+        globals.events={}
+        globals.tasks={}
+        json.get_event_tasks.forEach(function(ev){
+          globals.events[ev.event_id]=ev;
+          ev.tasks.forEach(function(t){
+            globals.tasks[t.event_task_id]=t;
+          })
+        });
+        for ( var key in globals.selection) {
+          if ( globals.selection.hasOwnProperty(key) && !globals.tasks.hasOwnProperty(key) ){
+			delete globals.selection[key];             
+          } 
+        } 
         globals.get_event_tasks=json.get_event_tasks
         update_event_table(json.get_event_tasks)
 		return true;
@@ -118,15 +131,18 @@
 	     // create a row for each object in the data
 	     var rows = tbody.selectAll("tr").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} );
 	     rows.enter().append("tr").on("click",task_click);
-	     rows.style('background-color',function(t) { return t.selected ?  "#3182bd" : "#ffffff" ; });
+	     rows.style('background-color',function(t) { return globals.selection[t.event_task_id] ?  "#3182bd" : "#ffffff" ; });
 		 rows.exit().remove();
 		 
     	 console.log('update');
     	    
 		 function task_click(t){
-    	    console.log('click');
-		    t.selected = !t.selected ;
-		    update_event_table(globals.get_event_tasks);
+		   if(globals.selection[t.event_task_id]){
+		     delete globals.selection[t.event_task_id];
+		   }else{
+		     globals.selection[t.event_task_id] = true;
+		   }
+		   update_event_table(globals.get_event_tasks);
 		 }
 		 
 	     // create a cell in each row for each column
