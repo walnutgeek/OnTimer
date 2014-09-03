@@ -93,7 +93,6 @@ def get_meta():
             'EventStatus' : enum_to_map(EventStatus),
             'TaskStatus' : enum_to_map(TaskStatus) }
             
-
 class Config:
     def __init__(self,s):
         y = yaml.load(s)
@@ -197,7 +196,7 @@ class Event:
 
     def __repr__(self): return self.__str__()
     
-    def generator_id(self): return self.generator.generator_id if self.generator else None
+    def generator_id(self): return self.generator['generator_id'] if self.generator else None
     
     def tasks(self):
         if self.event_tasks == None:
@@ -224,6 +223,12 @@ class EventTask:
         
     def cmd(self): return self.task.cmd.format(**self._format_vars())
     def state(self): return  json.dumps({'cmd':self.cmd()} )
+    
+class Generator:
+    def __init__(self, config, data):
+        self.gen_def = config
+        
+        
         
 
 

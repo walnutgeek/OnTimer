@@ -114,6 +114,25 @@ def test__fetch_tree():
          '%r' % db._fetch_tree(None, ( ('b','bees'),('c','sees') ), 
                                   query_columns =query_columns,
                                   query_result = query_result ) )
-     
+
+def test_generators():
+    gs = dao.load_active_generators()
+    eq_("[{'prev_event_id': None, 'current_event_id': None, 'ontime_state': None, 'event_name': u'price', 'generator_name': u'us', 'current_event': None, 'event_type_id': 1, 'generator_id': 1, 'last_seen_in_config_id': 3}, " +
+         "{'prev_event_id': None, 'current_event_id': None, 'ontime_state': None, 'event_name': u'tree', 'generator_name': u'10am', 'current_event': None, 'event_type_id': 2, 'generator_id': 3, 'last_seen_in_config_id': 3}]", repr(gs))
+    conf = dao.apply_config()
+    ev = event.Event.fromstring(conf,"tree,20140713")
+    ev.generator = gs[1]
+    dao.emit_event(ev)
+    gs = dao.load_active_generators()
+    eq_(True, gs[1]['current_event'] is not None)
+    cur_ev = gs[1]['current_event']
+    del gs[1]['current_event']
+    cur_ev['started_dt'] = None
+    eq_("{'updated_dt': None, 'event_string': u'tree,2014-07-13 00:00:00', 'event_id': 2, 'eta_dt': None, 'started_dt': None, 'event_type_id': 2, 'generator_id': 3, 'event_status': 1, 'finished_dt': None}", repr(cur_ev))
+
+    eq_("[{'prev_event_id': None, 'current_event_id': None, 'ontime_state': None, 'event_name': u'price', 'generator_name': u'us', 'current_event': None, 'event_type_id': 1, 'generator_id': 1, 'last_seen_in_config_id': 3}, " +
+         "{'prev_event_id': None, 'current_event_id': %d, 'ontime_state': None, 'event_name': u'tree', 'generator_name': u'10am', 'event_type_id': 2, 'generator_id': 3, 'last_seen_in_config_id': 3}]"
+         %(cur_ev['event_id'])
+         , repr(gs))
        
 

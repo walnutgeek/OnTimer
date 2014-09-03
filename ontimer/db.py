@@ -42,13 +42,13 @@ def _fetch_all(cursor, result = None, query=None):
     return list({col[0]:v[i] for (i, col) in enumerate(header)} for v in result)
 
 def _assignments(template, data, whine_if_empty=True ):
-    assignments = [ key +' = :_' + key for key in template if '_' + key in data]
-    if not(assignments):
+    assignments = [ key +' = :_' + key for key in template if '_' + key in data ]
+    if whine_if_empty and not(assignments):
         raise ValueError("Have nothing to update: %r", data)
     return ', '.join(assignments)
 
 def _conditions(template, data , whine_if_empty=True):
-    conditions = ['%s = :%s' % (key,key) for key in template if key in data]
+    conditions = [key + ' = :' + key if data[key] != None else key+' is null' for key in template if key in data ]
     if whine_if_empty and not(conditions):
         raise ValueError("Have nothing to constraint it on: %r", data)
     return ' and '.join(conditions)
@@ -144,7 +144,7 @@ class Dao:
 
     @_conn_decorator
     def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
-        cutoff = cutoff or  utils.utc_adjusted(hours=-6) 
+        cutoff = cutoff or  utils.utc_adjusted(hours=-24) 
         where = 'and (event.event_status in (%s) or event.started_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
         query ="select %s from %s where %s and %s %s order by %s" % (
             _selectors(_TYPE, _EVENT, _TASK, _TASKDEF),
@@ -211,7 +211,21 @@ class Dao:
             conn.commit()
             return True
         return False
-   
+    
+    @_conn_decorator
+    def load_active_generators(self, cursor=None, conn=None):
+        cursor.execute(''' 
+        SELECT generator.*, event_type.event_name, event.* 
+        FROM event_type JOIN generator ON event_type.event_type_id=generator.event_type_id 
+        LEFT OUTER JOIN event ON generator.current_event_id=event.event_id
+        where generator.last_seen_in_config_id = (select current_config_id from settings where settings_id = 1)
+        ''' )
+        generators = _fetch_tree(cursor, ( ('event_id','current_event'), ) )
+        for g in generators:
+            g['current_event'] = g['current_event'][0]
+            if not(g['current_event']['event_id']) :
+                g['current_event'] = None
+        return generators
      
     @_conn_decorator
     def update_task(self, task, cursor=None, conn=None):
@@ -283,11 +297,27 @@ class Dao:
         
     @_conn_decorator
     def emit_event(self, event, cursor=None, conn=None):
+        conn.commit()
         cursor.execute('''insert into event 
             (event_type_id,event_string,event_status,generator_id,started_dt,eta_dt) 
             values (?, ?, ?, ?, ?, ?)''', 
             (event.type.event_type_id,str(event),event.status.value,event.generator_id(),event.started_dt,event.eta_dt))
         event.event_id = cursor.lastrowid
+        if event.generator:
+            if event.generator['current_event_id'] :
+                event.generator['_prev_event_id']=event.generator['current_event_id'] 
+            event.generator['_current_event_id']=event.event_id 
+            varialbles = [ 'ontime_state', 'prev_event_id', 'current_event_id' ]
+            set_vars = _assignments(varialbles,event.generator)
+            conds = _conditions(varialbles,event.generator)
+            q = ''' update generator set %s 
+                 where generator_id = :generator_id and %s
+                ''' % (set_vars,conds)
+            print q
+            cursor.execute(q , event.generator )
+            if cursor.rowcount != 1 :
+                conn.rollback()
+                raise ValueError('cannot update generator')
         task_dict = {}
         for t in event.tasks() :
             task_dict[t.task_name()]=t
@@ -445,6 +475,7 @@ class Dao:
         generator_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         generator_name TEXT, 
+        ontime_state TIMESTAMP null,
         prev_event_id INTEGER null references event(event_id) ,
         current_event_id INTEGER null references event(event_id),
         last_seen_in_config_id INTEGER references config(config_id)
