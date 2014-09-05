@@ -4,9 +4,11 @@ ToDo
 ##Done
 
    * generator schema changes 
+   * Generator object
+   * Generator.setupEvent
+   * Generator.nextEvent
    
 ##Now
-   * Generator object
-   * Generator.emit_event functionality and test
 
 ##Later
+

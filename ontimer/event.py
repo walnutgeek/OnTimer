@@ -246,19 +246,12 @@ class Generator:
         else:
             cur_event = self.data['current_event']
             self.cur_event_status=findEnum(EventStatus,cur_event['event_status'])
-            if self.cur_event_status.isMetaState(MetaStates.final):
+            if self.cur_event_status.isMetaStatus(MetaStates.final):
                 self.status = GeneratorStatus.ONTIME
             else:
                 self.status = GeneratorStatus.EVENT_RUNNING
         
-    def setup(self,as_of=None):
-        as_of = as_of or datetime.datetime.now()
-        if self.status != GeneratorStatus.UNSET:
-            raise ValueError('generator already set' )
-        onstate = self.logic.on_time.state(as_of)
-        dt = onstate.toDateTime()
-        self.data['_ontime_state'] = dt
-        event_start_dt = self.logic.on_time.toUtc(onstate)
+    def _create_event(self, dt, event_start_dt):
         vars=[]
         for i,var in enumerate(self.event_type.vars):
             v = self.logic.vals[i]
@@ -267,7 +260,27 @@ class Generator:
             vars.append(v)
         ev = Event(self.event_type,tuple(vars),self.data,event_start_dt)
         return ev
-        
+
+    def setupEvent(self,as_of=None):
+        as_of = as_of or datetime.datetime.now()
+        if self.status != GeneratorStatus.UNSET:
+            raise ValueError('generator already set' )
+        onstate = self.logic.on_time.state(as_of)
+        dt = onstate.toDateTime()
+        self.data['_ontime_state'] = dt
+        event_start_dt = self.logic.on_time.toUtc(onstate)
+        return self._create_event(dt,event_start_dt)
+    
+     
+    def nextEvent(self):
+        if self.status == GeneratorStatus.ONTIME:
+            orig_onstate = self.logic.on_time.state(utils.toDateTime(self.data['ontime_state']))
+            next_onstate = orig_onstate.forward();
+            dt = next_onstate.toDateTime()
+            self.data['_ontime_state'] = dt
+            event_start_dt = self.logic.on_time.toUtc(next_onstate)
+            return self._create_event(dt,event_start_dt)
+        return None
             
             
         
