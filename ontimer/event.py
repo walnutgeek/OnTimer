@@ -61,7 +61,12 @@ class TaskStatus(IntEnum):
     skip = 102
 
     def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10, self in (TaskStatus.scheduled,TaskStatus.retry) ][meta]
-    
+
+class GeneratorStatus(IntEnum):
+    UNSET = 0 
+    EVENT_RUNNING = 2
+    ONTIME = 20
+
 class RunOutcome(IntEnum):
     fail = 3
     success = 101
@@ -117,6 +122,12 @@ class EventType:
         self.tasks = [ TaskDef(t) for t in y.pop('tasks')]
         if len(y) > 0:
             raise ValueError("Not supported property: %s" % str(y))
+
+    def getGenDefByName(self,name):
+        for g in self.generators:
+            if g.name == name:
+                return g
+        raise ValueError("No such GenBef with name: %s" % name, str(self.generators) )
 
 class VarDef:
     def __init__(self, v):
@@ -226,7 +237,43 @@ class EventTask:
     
 class Generator:
     def __init__(self, config, data):
-        self.gen_def = config
+        self.data = data
+        self.event_type = config.getTypeByName(data['event_name'])
+        self.logic = self.event_type.getGenDefByName(data['generator_name'])
+        if not(self.data['current_event']): 
+            self.status = GeneratorStatus.UNSET
+            self.cur_event_status = None
+        else:
+            cur_event = self.data['current_event']
+            self.cur_event_status=findEnum(EventStatus,cur_event['event_status'])
+            if self.cur_event_status.isMetaState(MetaStates.final):
+                self.status = GeneratorStatus.ONTIME
+            else:
+                self.status = GeneratorStatus.EVENT_RUNNING
+        
+    def setup(self,as_of=None):
+        as_of = as_of or datetime.datetime.now()
+        if self.status != GeneratorStatus.UNSET:
+            raise ValueError('generator already set' )
+        onstate = self.logic.on_time.state(as_of)
+        dt = onstate.toDateTime()
+        self.data['_ontime_state'] = dt
+        event_start_dt = self.logic.on_time.toUtc(onstate)
+        vars=[]
+        for i,var in enumerate(self.event_type.vars):
+            v = self.logic.vals[i]
+            if 'eval' in self.logic.vals[i]:
+                v = eval(self.logic.vals[i]['eval'])
+            vars.append(v)
+        ev = Event(self.event_type,tuple(vars),self.data,event_start_dt)
+        return ev
+        
+            
+            
+        
+        
+        
+                
         
         
         

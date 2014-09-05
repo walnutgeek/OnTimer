@@ -313,7 +313,6 @@ class Dao:
             q = ''' update generator set %s 
                  where generator_id = :generator_id and %s
                 ''' % (set_vars,conds)
-            print q
             cursor.execute(q , event.generator )
             if cursor.rowcount != 1 :
                 conn.rollback()
