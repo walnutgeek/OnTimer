@@ -192,13 +192,16 @@ class Dao:
         return _fetch_all(cursor, cursor.execute(q) )
 
     @_conn_decorator
-    def update_event(self, event, cursor=None, conn=None):
+    def update_event(self, event_data, cursor=None, conn=None):
+        if event.findEnum(event.EventStatus,event_data['_event_status']).isMetaStatus(event.MetaStates.final) :
+            event_data.update(_finished_dt = datetime.datetime.utcnow())
         set_vars = _assignments([
-              'event_status',
-              'finished_dt',
-              'eta_dt',
-              ],event)
-        newstate = dict(event)
+            'event_status',
+            'finished_dt',
+            'eta_dt',
+            ],event_data)
+        
+        newstate = dict(event_data)
         newstate.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute(''' update event set 
              updated_dt = :utc_now,

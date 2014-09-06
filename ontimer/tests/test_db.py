@@ -156,6 +156,7 @@ def test_generators():
     eq_(event.GeneratorStatus.UNSET,  gens[0].status)
     eq_(event.GeneratorStatus.EVENT_RUNNING, gens[1].status)
 
+    eq_(gens[0].nextEvent() == None, True)
     eq_(gens[1].nextEvent() == None, True)
     
     

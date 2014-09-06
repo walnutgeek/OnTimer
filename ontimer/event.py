@@ -32,7 +32,7 @@ def event_vars(event):
 
 def findEnum(enum,v):
     for e in list(enum):
-        if e.value == v or e.name == v:
+        if e == v or e.value == v or e.name == v:
             return e
     raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
 
