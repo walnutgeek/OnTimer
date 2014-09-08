@@ -16,7 +16,7 @@ import sys
 
 from . import event
 from .db import Dao
-from .utils import quict
+from . import utils
 import shlex, subprocess
 
 import logging
@@ -76,19 +76,19 @@ class Run:
     def storeArtifacts(self, **kwargs):
         for k in kwargs:
             self.state.dao.store_artifact(
-                      quict(event_task_id=self.task['event_task_id'], 
+                      utils.quict(event_task_id=self.task['event_task_id'], 
                             run=self.task['run_count'], 
                             name=k, value=kwargs[k]))
 
     def addArtifactScore(self, *args, **kwargs):
         for i in range(0,len(args),2):
             self.state.dao.add_artifact_score(
-                      quict(event_task_id=self.task['event_task_id'], 
+                      utils.quict(event_task_id=self.task['event_task_id'], 
                             run=self.task['run_count'], 
                             name=args[i], score=args[i+1]))
         for k in kwargs:
             self.state.dao.add_artifact_score(
-                      quict(event_task_id=self.task['event_task_id'], 
+                      utils.quict(event_task_id=self.task['event_task_id'], 
                             run=self.task['run_count'], 
                             name=k, score=kwargs[k]))
             
@@ -138,7 +138,12 @@ class State:
         for ev in self.dao.get_events_to_be_completed():
             ev.update( _event_status = event.EventStatus.success, _finished_dt = datetime.datetime.utcnow() )
             self.dao.update_event(ev)
-            
+        for gen_data in self.dao.load_active_generators():
+            gen = event.Generator(self.config,gen_data)
+            if event.GeneratorStatus.ONTIME == gen.status :
+                ne=gen.nextEvent()
+                if ne and ne.started_dt < utils.utc_adjusted(hours=+12):
+                    self.dao.emit_event(ne) 
         events,taskdict = self.dao.get_event_tasks()
         json_data = json.dumps({ 'get_event_tasks' : events })
         if json_data != self.json:

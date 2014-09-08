@@ -3,6 +3,7 @@ Created on Jul 11, 2014
 
 @author: sergeyk
 '''
+import pytz
 import datetime
 
 format_Y_m_d_H_M_S = '%Y-%m-%d %H:%M:%S'
@@ -28,7 +29,7 @@ def toDateTime(s,formats=all_formats):
 
 def utc_adjusted(**kwargs):
     ''' return utc adjusted '''
-    return datetime.datetime.utcnow()+datetime.timedelta(**kwargs)
+    return (datetime.datetime.utcnow()+datetime.timedelta(**kwargs)).replace(tzinfo=pytz.utc)
 
 def quict(**kwargs): 
     ''' quick way to create dict() '''
