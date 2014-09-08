@@ -29,7 +29,7 @@ def toDateTime(s,formats=all_formats):
 
 def utc_adjusted(**kwargs):
     ''' return utc adjusted '''
-    return (datetime.datetime.utcnow()+datetime.timedelta(**kwargs)).replace(tzinfo=pytz.utc)
+    return (datetime.datetime.utcnow()+datetime.timedelta(**kwargs))
 
 def quict(**kwargs): 
     ''' quick way to create dict() '''

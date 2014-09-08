@@ -119,11 +119,10 @@
       
 	     var columns = ['event_task_id','task_name','run_at_dt','task_status','run_count','updated_dt','depend_on']
 
-	     tbody = table.selectAll("tbody").data(events);
+	     tbody = table.selectAll("tbody").data(events,function(d,i){return i+':'+d['event_id'];});
 	     tbody.enter().append("tbody").append("tr").attr("class","event_row").append('th');
 	     tbody.exit().remove();
 	     tbody.selectAll(".event_row th").attr('colspan',columns.length).text(function(d){return d['event_string']})
-	     
 	     
 	     // append the header row
 	     ths = thead_tr.selectAll("th").data(columns);

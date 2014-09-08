@@ -208,6 +208,6 @@ class OnTime:
         return self.onexp.state(dt)
         
     def toUtc(self, state):
-        return self.tz.localize(state.toDateTime()).astimezone(pytz.utc)
+        return self.tz.localize(state.toDateTime()).astimezone(pytz.utc).replace(tzinfo=None)
                 
                 

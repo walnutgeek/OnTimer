@@ -5,7 +5,7 @@ import datetime
 from collections import defaultdict
 
 def dt2s(dt):
-    return dt.strftime('%Y-%m-%d %H:%M:%S %Z%z')
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
     
 def test_one_date():
     exp = OnExp("0 6 1,31 * tue,wed")
@@ -40,9 +40,9 @@ def test_all_dates():
 def test_ontime():
     ont = OnTime("0 6 1,31 * tue,wed","Australia/Sydney")
     s = ont.state(datetime.datetime(2014,7,4,0,0,0))
-    eq_("2014-09-30 20:00:00 UTC+0000", dt2s(ont.toUtc(s))) 
-    eq_("2014-06-30 20:00:00 UTC+0000", dt2s(ont.toUtc(s.back())) )
-    eq_("2014-12-30 19:00:00 UTC+0000", dt2s(ont.toUtc(s.forward())) )
+    eq_("2014-09-30 20:00:00", dt2s(ont.toUtc(s))) 
+    eq_("2014-06-30 20:00:00", dt2s(ont.toUtc(s.back())) )
+    eq_("2014-12-30 19:00:00", dt2s(ont.toUtc(s.forward())) )
     
     
     

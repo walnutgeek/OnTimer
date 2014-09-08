@@ -211,7 +211,7 @@ class Event:
     
     def tasks(self):
         if self.event_tasks == None:
-            self.event_tasks = [EventTask(self,t) for t in self.type.tasks]
+            self.event_tasks = [EventTask(self,t,self.started_dt) for t in self.type.tasks]
         return self.event_tasks
     
     def var_dict(self):
