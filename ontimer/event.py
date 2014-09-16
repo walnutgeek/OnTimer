@@ -65,7 +65,9 @@ class TaskStatus(IntEnum):
 class GeneratorStatus(IntEnum):
     UNSET = 0 
     EVENT_RUNNING = 2
+    PAUSED = 11
     ONTIME = 20
+
 
 class RunOutcome(IntEnum):
     fail = 3

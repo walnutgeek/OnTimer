@@ -144,7 +144,7 @@ class Dao:
 
     @_conn_decorator
     def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
-        cutoff = cutoff or  utils.utc_adjusted(hours=-6) 
+        cutoff = cutoff or  utils.utc_adjusted(hours=-72) 
         where = 'and (event.event_status in (%s) or event.started_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
         query ="select %s from %s where %s and %s %s order by %s" % (
             _selectors(_TYPE, _EVENT, _TASK, _TASKDEF),

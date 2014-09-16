@@ -162,7 +162,6 @@
 	     rows.style('background-color',function(t) { return globals.selection[t.event_task_id] ?  "#ffffaa" : "#ffffff" ; });
 		 rows.exit().remove();
 		 
-    	    
 		 function task_click(t){
 		   if(globals.selection[t.event_task_id]){
 		     delete globals.selection[t.event_task_id];

@@ -19,15 +19,18 @@ ToDo
 	     	* Recent +-24hr events (refactor to use event filter)
 	        * Event filter: Search event
 	    * query 
-	    	scheduled after dt_delta(hours=-24)
+	    	scheduled after dt_delta(days=-1)
 	    	event_id = N
-	    	event_type = S  and scheduled after dt_delta(days=-31)
+	    	event_type = S and scheduled after dt_delta(days=-31)
 	    	gnerator_id = G and scheduled after dt_delta(days=-31)
 	    	event_string ~ Q and scheduled after dt_delta(days=-31)
+	    	
    * Subscription
      * Events<query>
-     * Task<Task_ID>
-     * Log<Task_ID>
+     * e<event_id>
+     * t<event_task_id>
+     * l<log_id>
+     * g<generator_id>
       
    * Screens
      * Screen: Event summary 
@@ -54,6 +57,11 @@ ToDo
 | paused                        |  N    |  Y      | Y    |  N    | N          |
 | success, skip                 |  N    |  N      | N    |  Y    | Y          |
    
-
+| Generator                     | SETUP  | RESET   |
+|-------------------------------|--------|---------|
+| UNSET                         |  Y     |  N      |
+| EVENT_RUNNING                 |  N     |  N      |
+| PAUSED                        |  N     |  Y      |
+| ONTIME                        |  N     |  Y      |
 
 
