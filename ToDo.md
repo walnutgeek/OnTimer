@@ -26,11 +26,11 @@ ToDo
 	    	event_string ~ Q and scheduled after dt_delta(days=-31)
 	    	
    * Subscription
-     * Events<query>
-     * e<event_id>
-     * t<event_task_id>
-     * l<log_id>
-     * g<generator_id>
+     * q:[query] 
+     * e[event_id]
+     * t[event_task_id]
+     * l[log_id]
+     * g[generator_id]
       
    * Screens
      * Screen: Event summary 
