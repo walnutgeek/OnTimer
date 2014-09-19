@@ -63,10 +63,10 @@ class TaskStatus(IntEnum):
     def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10, self in (TaskStatus.scheduled,TaskStatus.retry) ][meta]
 
 class GeneratorStatus(IntEnum):
-    UNSET = 0 
-    EVENT_RUNNING = 2
-    PAUSED = 11
-    ONTIME = 20
+    unset = 0 
+    running = 2
+    paused = 11
+    ontime = 20
 
 
 class RunOutcome(IntEnum):
@@ -243,15 +243,15 @@ class Generator:
         self.event_type = config.getTypeByName(data['event_name'])
         self.logic = self.event_type.getGenDefByName(data['generator_name'])
         if not(self.data['current_event']): 
-            self.status = GeneratorStatus.UNSET
+            self.status = GeneratorStatus.unset
             self.cur_event_status = None
         else:
             cur_event = self.data['current_event']
             self.cur_event_status=findEnum(EventStatus,cur_event['event_status'])
             if self.cur_event_status.isMetaStatus(MetaStates.final):
-                self.status = GeneratorStatus.ONTIME
+                self.status = GeneratorStatus.ontime
             else:
-                self.status = GeneratorStatus.EVENT_RUNNING
+                self.status = GeneratorStatus.running
         
     def _create_event(self, dt, event_start_dt):
         vars=[]
@@ -265,7 +265,7 @@ class Generator:
 
     def setupEvent(self,as_of=None):
         as_of = as_of or datetime.datetime.now()
-        if self.status != GeneratorStatus.UNSET:
+        if self.status != GeneratorStatus.unset:
             raise ValueError('generator already set' )
         onstate = self.logic.on_time.state(as_of)
         dt = onstate.toDateTime()
@@ -275,7 +275,7 @@ class Generator:
     
      
     def nextEvent(self):
-        if self.status == GeneratorStatus.ONTIME:
+        if self.status == GeneratorStatus.ontime:
             orig_onstate = self.logic.on_time.state(utils.toDateTime(self.data['ontime_state']))
             next_onstate = orig_onstate.forward();
             dt = next_onstate.toDateTime()

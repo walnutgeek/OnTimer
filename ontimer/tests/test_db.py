@@ -122,7 +122,7 @@ def test_generators():
          "{'prev_event_id': None, 'current_event_id': None, 'ontime_state': None, 'event_name': u'tree', 'generator_name': u'10am', 'current_event': None, 'event_type_id': 2, 'generator_id': 3, 'last_seen_in_config_id': 3}]", repr(gs))
     conf = dao.apply_config()
     gen = event.Generator(conf, gs[1])
-    eq_(event.GeneratorStatus.UNSET,gen.status)
+    eq_(event.GeneratorStatus.unset,gen.status)
     dao.emit_event(gen.setupEvent(datetime.datetime(2014,7,13)))
     gs = dao.load_active_generators()
     eq_(True, gs[1]['current_event'] is not None)
@@ -136,16 +136,16 @@ def test_generators():
           , repr(gs))
     gens = [event.Generator(conf,data) for data in dao.load_active_generators()]
     
-    eq_(event.GeneratorStatus.UNSET,         gens[0].status)
-    eq_(event.GeneratorStatus.EVENT_RUNNING, gens[1].status)
+    eq_(event.GeneratorStatus.unset,         gens[0].status)
+    eq_(event.GeneratorStatus.running, gens[1].status)
     
     gens[1].data['current_event']['_event_status'] = event.EventStatus.skip
     dao.update_event(gens[1].data['current_event'])
     
     gens = [event.Generator(conf,data) for data in dao.load_active_generators()]
     
-    eq_(event.GeneratorStatus.UNSET,  gens[0].status)
-    eq_(event.GeneratorStatus.ONTIME, gens[1].status)
+    eq_(event.GeneratorStatus.unset,  gens[0].status)
+    eq_(event.GeneratorStatus.ontime, gens[1].status)
     
     ne=gens[1].nextEvent()
     eq_(ne != None, True)
@@ -153,8 +153,8 @@ def test_generators():
 
     gens = [event.Generator(conf,data) for data in dao.load_active_generators()]
 
-    eq_(event.GeneratorStatus.UNSET,  gens[0].status)
-    eq_(event.GeneratorStatus.EVENT_RUNNING, gens[1].status)
+    eq_(event.GeneratorStatus.unset,  gens[0].status)
+    eq_(event.GeneratorStatus.running, gens[1].status)
 
     eq_(gens[0].nextEvent() == None, True)
     eq_(gens[1].nextEvent() == None, True)
