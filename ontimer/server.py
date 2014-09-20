@@ -140,7 +140,7 @@ class State:
             self.dao.update_event(ev)
         for gen_data in self.dao.load_active_generators():
             gen = event.Generator(self.config,gen_data)
-            if event.GeneratorStatus.ONTIME == gen.status :
+            if event.GeneratorStatus.ontime == gen.status :
                 ne=gen.nextEvent()
                 if ne and ne.started_dt < utils.utc_adjusted(hours=+12):
                     self.dao.emit_event(ne) 

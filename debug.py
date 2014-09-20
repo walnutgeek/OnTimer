@@ -5,6 +5,19 @@ config=dao.apply_config()
 gens = [event.Generator(config,gen_data) for gen_data in dao.load_active_generators()]
              
 
+'''
+$python -i debug.py
+>>> import datetime
+>>> dt=datetime.datetime(2014,9,10)
+>>> dao
+<ontimer.db.Dao instance at 0x10067ee18>
+>>> dao.emit_event(gens[1].setupEvent(dt))
+tree,2014-09-10 10:00:00
+>>>
+^D
+$python -m ontimer.app --root root/ --config sample-config.yaml server
+''' 
+
 
 # from ontimer.tests.test_db import *
 # import time

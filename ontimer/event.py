@@ -226,7 +226,7 @@ class EventTask:
         self.status = TaskStatus.scheduled
         self.run_at_dt = run_at_dt or datetime.datetime.utcnow()
         
-    def task_id(self):return self.task.task_id
+    def task_type_id(self):return self.task.task_type_id
     def task_name(self):return self.task.name
     def _format_vars(self):
         format_vars=dict(global_config)

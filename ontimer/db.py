@@ -15,7 +15,7 @@ _TYPE =    'event_type',        'event_type_id'
 _EVENT =   'event',             'event_id'
 _TASK =    'event_task',        'event_task_id'
 _PREREQ =  'event_task_prereq', 'prereq_id'
-_TASKDEF = 'task',              'task_id'
+_TASKTYPE = 'task_type',         'task_type_id'
 
 def _conn_decorator(f):
     def magic(self, *args, **kwargs):
@@ -147,9 +147,9 @@ class Dao:
         cutoff = cutoff or  utils.utc_adjusted(hours=-72) 
         where = 'and (event.event_status in (%s) or event.started_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
         query ="select %s from %s where %s and %s %s order by %s" % (
-            _selectors(_TYPE, _EVENT, _TASK, _TASKDEF),
-            _froms(_TYPE, _EVENT, _TASK, _TASKDEF),
-            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKDEF, _TASK), where, 
+            _selectors(_TYPE, _EVENT, _TASK, _TASKTYPE),
+            _froms(_TYPE, _EVENT, _TASK, _TASKTYPE),
+            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKTYPE, _TASK), where, 
             'event.started_dt DESC, event.event_id, event_task.event_task_id')
         cursor.execute(query,(cutoff,))
         events = _fetch_tree(cursor,((_TASK[_PK],'tasks'),) )
@@ -324,9 +324,9 @@ class Dao:
         for t in event.tasks() :
             task_dict[t.task_name()]=t
             cursor.execute('''insert into event_task 
-                (event_id, task_id, task_state, task_status, run_at_dt, updated_dt) 
+                (event_id, task_type_id, task_state, task_status, run_at_dt, updated_dt) 
                 values (?, ?, ?, ?, ?, ?)''', 
-                (event.event_id,t.task_id(),t.state(),t.status.value,t.run_at_dt,datetime.datetime.utcnow()))
+                (event.event_id,t.task_type_id(),t.state(),t.status.value,t.run_at_dt,datetime.datetime.utcnow()))
             t.event_task_id =  cursor.lastrowid
         for t in event.tasks() :
             if t.task.depends_on :
@@ -367,25 +367,25 @@ class Dao:
                 cursor.execute("insert into event_type (event_name,last_seen_in_config_id) values (?,?)",(event_type.name,config.config_id))
                 event_type.event_type_id = cursor.lastrowid
             
-            def update_ids(obj_list,name):
+            def update_ids(obj_list,name, namecol):
                 for obj in obj_list:
                     obj_id = None
-                    r = list(cursor.execute("select {0}_id, last_seen_in_config_id from {0} where {0}_name = ? and event_type_id = ?".format(name),
+                    r = list(cursor.execute("select {0}_id, last_seen_in_config_id from {0} where {1} = ? and event_type_id = ?".format(name,namecol),
                                             (obj.name,event_type.event_type_id)))
                     if len(r) > 1 :
                         raise ValueError('duplicate %s: %s' % name, obj.name)
                     elif len(r) == 1:
                         obj_id = r[0][0]
                         if r[0][1] != config.config_id:
-                            cursor.execute("update {0} set last_seen_in_config_id = ? where  {0}_id = ?".format(name),(config.config_id,obj_id))
+                            cursor.execute("update {0} set last_seen_in_config_id = ? where  {0}_id = ?".format(name,namecol),(config.config_id,obj_id))
                     else:
-                        cursor.execute("insert into {0} ({0}_name,event_type_id,last_seen_in_config_id) values (?,?,?)".format(name),
+                        cursor.execute("insert into {0} ({1},event_type_id,last_seen_in_config_id) values (?,?,?)".format(name,namecol),
                                        (obj.name,event_type.event_type_id,config.config_id))
                         obj_id = cursor.lastrowid
                     setattr(obj,'%s_id' % name, obj_id)
                     
-            update_ids(event_type.generators,'generator')
-            update_ids(event_type.tasks,'task')
+            update_ids(event_type.generators,'generator', 'generator_name')
+            update_ids(event_type.tasks,'task_type', 'task_name')
             
         conn.commit()
         return config
@@ -431,8 +431,8 @@ class Dao:
         updated_dt TIMESTAMP 
         )''' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.all) )
     
-        cursor.execute('''CREATE TABLE task (
-        task_id INTEGER primary key,
+        cursor.execute('''CREATE TABLE task_type (
+        task_type_id INTEGER primary key,
         event_type_id INTEGER references event_type(event_type_id),
         task_name TEXT,
         last_seen_in_config_id INTEGER references config(config_id)
@@ -441,7 +441,7 @@ class Dao:
         cursor.execute('''CREATE TABLE event_task (
         event_task_id INTEGER primary key,
         event_id INTEGER references event(event_id),
-        task_id INTEGER references task(task_id),
+        task_type_id INTEGER references task_type(task_type_id),
         task_state TEXT,
         task_status INTEGER CHECK( task_status IN (%s) ) NOT NULL DEFAULT 1,
         run_count INTEGER DEFAULT 0,
