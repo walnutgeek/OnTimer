@@ -142,7 +142,7 @@ class State:
             gen = event.Generator(self.config,gen_data)
             if event.GeneratorStatus.ontime == gen.status :
                 ne=gen.nextEvent()
-                if ne and ne.started_dt < utils.utc_adjusted(hours=+12):
+                if ne and ne.scheduled_dt < utils.utc_adjusted(hours=+12):
                     self.dao.emit_event(ne) 
         events,taskdict = self.dao.get_event_tasks()
         json_data = json.dumps({ 'get_event_tasks' : events })

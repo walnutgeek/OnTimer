@@ -145,12 +145,12 @@ class Dao:
     @_conn_decorator
     def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
         cutoff = cutoff or  utils.utc_adjusted(hours=-72) 
-        where = 'and (event.event_status in (%s) or event.started_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
+        where = 'and (event.event_status in (%s) or event.scheduled_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
         query ="select %s from %s where %s and %s %s order by %s" % (
             _selectors(_TYPE, _EVENT, _TASK, _TASKTYPE),
             _froms(_TYPE, _EVENT, _TASK, _TASKTYPE),
             _joins(_TYPE, _EVENT, _TASK), _joins(_TASKTYPE, _TASK), where, 
-            'event.started_dt DESC, event.event_id, task.task_id')
+            'event.scheduled_dt DESC, event.event_id, task.task_id')
         cursor.execute(query,(cutoff,))
         events = _fetch_tree(cursor,((_TASK[_PK],'tasks'),) )
         tasks = [ t for e in events for t in e['tasks'] ]
@@ -308,9 +308,9 @@ class Dao:
     def emit_event(self, event, cursor=None, conn=None):
         conn.commit()
         cursor.execute('''insert into event 
-            (event_type_id,event_string,event_status,generator_id,started_dt,eta_dt) 
+            (event_type_id,event_string,event_status,generator_id,scheduled_dt,eta_dt) 
             values (?, ?, ?, ?, ?, ?)''', 
-            (event.type.event_type_id,str(event),event.status.value,event.generator_id(),event.started_dt,event.eta_dt))
+            (event.type.event_type_id,str(event),event.status.value,event.generator_id(),event.scheduled_dt,event.eta_dt))
         event.event_id = cursor.lastrowid
         if event.generator:
             if event.generator['current_event_id'] :
@@ -431,7 +431,7 @@ class Dao:
         event_string TEXT, 
         event_status INTEGER CHECK( event_status IN (%s) ) NOT NULL,
         generator_id INTEGER references generator(generator_id),
-        started_dt TIMESTAMP not null,
+        scheduled_dt TIMESTAMP not null,
         finished_dt TIMESTAMP ,
         eta_dt TIMESTAMP, 
         updated_dt TIMESTAMP 

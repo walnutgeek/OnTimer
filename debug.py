@@ -8,8 +8,8 @@ gens = [event.Generator(config,gen_data) for gen_data in dao.load_active_generat
 '''
 $python -i debug.py
 import datetime
-dt=datetime.datetime(2014,9,10)
-set_global_var('ipy_path','/Users/sergeyk/ipyhome/')
+dt=datetime.datetime(2014,9,15)
+dao.set_global_var('ipy_path','/Users/sergeyk/ipyhome/')
 dao.emit_event(gens[1].setupEvent(dt))
 
 $python -m ontimer.app --root root/ --config sample-config.yaml server

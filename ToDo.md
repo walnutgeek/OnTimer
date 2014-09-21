@@ -9,12 +9,12 @@ ToDo
    * Generator.nextEvent
    * Define screens, subscriptions
    * Action matrix
-  * db changes
-    * rename tables: 
-      * task -> task_type, 
-      * event_task*->task* 
-    * add updated_dt to event and change it on every task update
-    * update db_model.pdf
+   * db changes
+     * rename tables: 
+       * task -> task_type, 
+       * event_task*->task* 
+     * add updated_dt to event and change it on every task update
+     * update db_model.pdf
    
 ##Now
     * cache superset of u31 and s31
