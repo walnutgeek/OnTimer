@@ -126,7 +126,10 @@
    	             $_.TCell(d, 'event_string', 2), 
    	             $_.TCell(d, 'started_dt',   1,$_.utils.relativeDateString), 
    	             $_.TCell(d, 'event_status',  1, globals.EventStatus.key )  , 
-   	             $_.TCell(d, undefined,      3) ]; 
+   	             $_.TCell(d, undefined,      1),
+   	             $_.TCell(d, 'updated_dt',   1,$_.utils.relativeDateString), 
+   	             $_.TCell(d, undefined,      1)
+   	             ]; 
          };
        	
 	     var cells_data = function(d){
@@ -145,7 +148,7 @@
 	     ths.enter().append("th").text(function(column) { return column; });
 	     ths.exit().remove();
 
-	     tbody = table.selectAll("tbody").data(events,function(d,i){return i +':' + d['event_id'];});
+	     tbody = table.selectAll("tbody").data(events,function(d,i){return i +':' + d.event_id;});
 	     
 	     tbody.enter().append("tbody").append("tr").attr("class","event_row")
 	     tbody.exit().remove();
@@ -157,7 +160,7 @@
 	     // append the header row
 	     
 	     // create a row for each object in the data
-	     var rows = tbody.selectAll(".task_row").data(function(d){return d.tasks;}, function(d){return d['task_id'];} );
+	     var rows = tbody.selectAll(".task_row").data(function(d){return d.tasks;}, function(d){return d.task_id;} );
 	     rows.enter().append("tr").attr("class","task_row").on("click",task_click);
 	     rows.style('background-color',function(t) { return globals.selection[t.task_id] ?  "#ffffaa" : "#ffffff" ; });
 		 rows.exit().remove();

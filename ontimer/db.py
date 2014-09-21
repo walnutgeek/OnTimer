@@ -250,8 +250,14 @@ class Dao:
              task_status = :task_status
             ''' % set_vars, newtask)
         if cursor.rowcount == 1 :
-            conn.commit()
-            return True
+            cursor.execute('''update event set 
+                 updated_dt = :utc_now 
+                 where
+                 event_id = :event_id
+                ''', newtask)
+            if cursor.rowcount == 1 :
+                conn.commit()
+                return True
         return False
 
     @_conn_decorator

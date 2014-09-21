@@ -45,7 +45,6 @@ def read_stream(run, idx, fd, events):
 
 class Run:
     def __init__(self,state, task):
-        log.info( 'started state=%r task=%r' % ( state , task) )
         self.state = state
         self.task = task
         self.update_task( _run_count = task['run_count'] + 1 , _task_status = event.TaskStatus.running )
@@ -54,7 +53,6 @@ class Run:
         self.task_vars = event.task_vars(self.task)
         self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         self.finished = False
-        log.info( 'self=%r' % ( self ) )
         os.makedirs(self.rundir)
         self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
         log.info( 'started task_id=%d cmd=%s' % ( self.task['task_id'], self.task_state['cmd']))
