@@ -12,11 +12,9 @@ ToDo
   * db changes
     * rename tables: 
       * task -> task_type, 
+      * event_task*->task* 
    
 ##Now
-  * db changes
-    * rename tables: 
-      * event_task*->task* [next]
     * add updated_dt to event and change it on every task update
     * cache superset of u31 and s31
     * implement subscriptions tracker object on server side

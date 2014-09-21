@@ -66,15 +66,15 @@ def test_get_tasks_to_run():
     r=dao.get_tasks_to_run()
     eq_(1,len(r))
     t1 = r[0]
-    et_id = t1['event_task_id']
+    et_id = t1['task_id']
     eq_(1,et_id)
-    artifact = { 'event_task_id' : et_id, 
+    artifact = { 'task_id' : et_id, 
                  'run' : 1,
                 'name' : 'key',
                 'value' : 'value'
             }
     dao.store_artifact(artifact)
-    score = { 'event_task_id' : et_id,
+    score = { 'task_id' : et_id,
                'run' : 1,
                'name' : 'score',
                'score' : 17 }
@@ -95,7 +95,7 @@ def test_get_tasks_to_run():
     r=dao.get_tasks_to_run()
     eq_(1,len(r))
     t2 = r[0]
-    et_id2 = t2['event_task_id']
+    et_id2 = t2['task_id']
     eq_(2,et_id2)
     events,tasksdict=dao.get_event_tasks()
     eq_(1,len(events))
@@ -103,7 +103,7 @@ def test_get_tasks_to_run():
 #     ev=events[1]
     ev['_event_status']=event.EventStatus.fail
     eq_(True,dao.update_event(ev))
-    dao.load_task({'event_task_id':et_id2})
+    dao.load_task({'task_id':et_id2})
     
  
 def test__fetch_tree():

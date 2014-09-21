@@ -1,5 +1,5 @@
 globals:
-  logs_dir: "{ontimer_root}/logs/j{event_major}/n{event_minor}_t{event_task_id}_r{run}/"
+  logs_dir: "{ontimer_root}/logs/j{event_major}/n{event_minor}_t{task_id}_r{run}/"
 events:
   - name: price
     vars: 

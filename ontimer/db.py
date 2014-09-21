@@ -10,11 +10,11 @@ default_filename = '.ontimer'
 
 _TBL = 0
 _PK  = 1
-#          Table(_TBL)          PKey(_PK)
-_TYPE =    'event_type',        'event_type_id'
-_EVENT =   'event',             'event_id'
-_TASK =    'event_task',        'event_task_id'
-_PREREQ =  'event_task_prereq', 'prereq_id'
+#           Table(_TBL)          PKey(_PK)
+_TYPE =     'event_type',        'event_type_id'
+_EVENT =    'event',             'event_id'
+_TASK =     'task',              'task_id'
+_PREREQ =   'task_prereq',       'prereq_id'
 _TASKTYPE = 'task_type',         'task_type_id'
 
 def _conn_decorator(f):
@@ -150,12 +150,12 @@ class Dao:
             _selectors(_TYPE, _EVENT, _TASK, _TASKTYPE),
             _froms(_TYPE, _EVENT, _TASK, _TASKTYPE),
             _joins(_TYPE, _EVENT, _TASK), _joins(_TASKTYPE, _TASK), where, 
-            'event.started_dt DESC, event.event_id, event_task.event_task_id')
+            'event.started_dt DESC, event.event_id, task.task_id')
         cursor.execute(query,(cutoff,))
         events = _fetch_tree(cursor,((_TASK[_PK],'tasks'),) )
         tasks = [ t for e in events for t in e['tasks'] ]
         alltasks = { task[_TASK[_PK]] : task for task in tasks }
-        dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'event_task_prereq.before_task_id, event_task_prereq.event_task_id' , where = where ),(cutoff,))
+        dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'task_prereq.before_task_id, task_prereq.task_id' , where = where ),(cutoff,))
         for d in dependenies:
             task=alltasks[d[1]]
             if 'depend_on' in task:
@@ -166,26 +166,26 @@ class Dao:
          
     @_conn_decorator
     def get_tasks_to_run(self, cursor=None, conn=None):
-        q = '''select et.* from event_task et 
+        q = '''select et.* from task et 
             where et.run_at_dt <= ? and et.task_status in (%s) 
             and not exists ( 
-            select 'x' from  event_task_prereq p, event_task bt 
-            where et.event_task_id = p.event_task_id 
-            and p.before_task_id = bt.event_task_id and bt.task_status in (%s) )
+            select 'x' from  task_prereq p, task bt 
+            where et.task_id = p.task_id 
+            and p.before_task_id = bt.task_id and bt.task_status in (%s) )
             ''' % (event.joinEnumsIndices(event.TaskStatus,event.MetaStates.ready),
                    event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )    
         return _fetch_all(cursor, cursor.execute(q,(datetime.datetime.utcnow(),)) )
 
     @_conn_decorator
     def get_tasks_of_status(self, status, cursor=None, conn=None):
-        q = 'select et.* from event_task et  where et.task_status = ?'    
+        q = 'select et.* from task et  where et.task_status = ?'    
         return _fetch_all(cursor, cursor.execute(q,(status,)) )
 
     @_conn_decorator
     def get_events_to_be_completed(self, cursor=None, conn=None):
         q = '''select e.* from event e  
         where e.event_status in (%s) and not exists 
-        (select 'x' from event_task et 
+        (select 'x' from task et 
         where e.event_id = et.event_id and et.task_status in (%s) )
         ''' % (event.joinEnumsIndices(event.EventStatus,event.MetaStates.active),
               event.joinEnumsIndicesExcept(event.TaskStatus,event.MetaStates.final) )     
@@ -241,11 +241,11 @@ class Dao:
               ],task)
         newtask = dict(task)
         newtask.update(utc_now = datetime.datetime.utcnow( ))
-        cursor.execute('''update event_task set 
+        cursor.execute('''update task set 
              updated_dt = :utc_now,
              %s
              where
-             event_task_id = :event_task_id and
+             task_id = :task_id and
              updated_dt = :updated_dt and
              task_status = :task_status
             ''' % set_vars, newtask)
@@ -256,8 +256,8 @@ class Dao:
 
     @_conn_decorator
     def load_task(self, task, cursor=None, conn=None):
-        result = list(cursor.execute('''select et.* from event_task et 
-        where et.event_task_id = :event_task_id''', task))
+        result = list(cursor.execute('''select et.* from task et 
+        where et.task_id = :task_id''', task))
         if len(result)!=1:
             raise ValueError('expect to get one instead of %d record for %r ' % (len(result),task) )
         return _fetch_all( cursor, result )[0]
@@ -267,11 +267,11 @@ class Dao:
         artifact = dict(artifact)
         artifact.update(utc_now = datetime.datetime.utcnow( ))
         cursor.execute('''UPDATE artifact SET value = :value, stored_dt = :utc_now 
-            WHERE  event_task_id = :event_task_id and run = :run and name = :name
+            WHERE  task_id = :task_id and run = :run and name = :name
             ''', artifact)
         if cursor.rowcount == 0 :
-            cursor.execute('''INSERT INTO artifact (event_task_id, run, name, value, stored_dt) 
-                VALUES ( :event_task_id, :run,  :name, :value, :utc_now)
+            cursor.execute('''INSERT INTO artifact (task_id, run, name, value, stored_dt) 
+                VALUES ( :task_id, :run,  :name, :value, :utc_now)
                 ''', artifact)
         elif cursor.rowcount != 1:
             raise ValueError('unexpected row count: %d storing: %r' % (cursor.rowcount, artifact))
@@ -280,13 +280,13 @@ class Dao:
     @_conn_decorator
     def add_artifact_score(self, score, cursor=None, conn=None):
         result = list(cursor.execute('''SELECT artifact_id FROM artifact
-            WHERE  event_task_id = :event_task_id and run = :run and name = :name
+            WHERE  task_id = :task_id and run = :run and name = :name
             ''', score))
         score = dict(score)
         score.update(utc_now = datetime.datetime.utcnow( ))
         if len(result) == 0 :
-            cursor.execute('''INSERT INTO artifact (event_task_id, run, name, value, stored_dt) 
-                VALUES ( :event_task_id, :run, :name, NULL, :utc_now)
+            cursor.execute('''INSERT INTO artifact (task_id, run, name, value, stored_dt) 
+                VALUES ( :task_id, :run, :name, NULL, :utc_now)
                 ''', score)
             score.update(artifact_id = cursor.lastrowid)
         elif len(result) == 1 :
@@ -323,18 +323,18 @@ class Dao:
         task_dict = {}
         for t in event.tasks() :
             task_dict[t.task_name()]=t
-            cursor.execute('''insert into event_task 
+            cursor.execute('''insert into task 
                 (event_id, task_type_id, task_state, task_status, run_at_dt, updated_dt) 
                 values (?, ?, ?, ?, ?, ?)''', 
                 (event.event_id,t.task_type_id(),t.state(),t.status.value,t.run_at_dt,datetime.datetime.utcnow()))
-            t.event_task_id =  cursor.lastrowid
+            t.task_id =  cursor.lastrowid
         for t in event.tasks() :
             if t.task.depends_on :
                 for upstream in t.task.depends_on :
-                    cursor.execute('''insert into event_task_prereq 
-                                (before_task_id, event_task_id) 
+                    cursor.execute('''insert into task_prereq 
+                                (before_task_id, task_id) 
                                 values (?, ?)''', 
-                                (task_dict[upstream].event_task_id, t.event_task_id))
+                                (task_dict[upstream].task_id, t.task_id))
         conn.commit()
         return event
         
@@ -438,8 +438,8 @@ class Dao:
         last_seen_in_config_id INTEGER references config(config_id)
         )''')
     
-        cursor.execute('''CREATE TABLE event_task (
-        event_task_id INTEGER primary key,
+        cursor.execute('''CREATE TABLE task (
+        task_id INTEGER primary key,
         event_id INTEGER references event(event_id),
         task_type_id INTEGER references task_type(task_type_id),
         task_state TEXT,
@@ -451,15 +451,15 @@ class Dao:
         )'''% ( event.joinEnumsIndices(event.TaskStatus,event.MetaStates.all),  
                 event.joinEnumsIndices(event.RunOutcome,event.MetaStates.all) ) )
    
-        cursor.execute('''CREATE TABLE event_task_prereq (
+        cursor.execute('''CREATE TABLE task_prereq (
         prereq_id INTEGER primary key,
-        before_task_id INTEGER references event_task(event_task_id ),
-        event_task_id INTEGER references event_task(event_task_id )
+        before_task_id INTEGER references task(task_id ),
+        task_id INTEGER references task(task_id )
         )''' )
         
         cursor.execute('''CREATE TABLE artifact (
         artifact_id INTEGER primary key,
-        event_task_id INTEGER references event_task(event_task_id),
+        task_id INTEGER references task(task_id),
         run INTEGER not null,
         name TEXT,
         value TEXT null,

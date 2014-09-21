@@ -131,7 +131,7 @@
        	
 	     var cells_data = function(d){
 	        return [  
-                 $_.TCell(d, 'event_task_id', 1), 
+                 $_.TCell(d, 'task_id', 1), 
    	             $_.TCell(d, 'task_name', 1), 
    	             $_.TCell(d, 'run_at_dt', 1 , $_.utils.relativeDateString), 
    	             $_.TCell(d, 'task_status', 1, globals.TaskStatus.key), 
@@ -157,16 +157,16 @@
 	     // append the header row
 	     
 	     // create a row for each object in the data
-	     var rows = tbody.selectAll(".task_row").data(function(d){return d.tasks;}, function(d){return d['event_task_id'];} );
+	     var rows = tbody.selectAll(".task_row").data(function(d){return d.tasks;}, function(d){return d['task_id'];} );
 	     rows.enter().append("tr").attr("class","task_row").on("click",task_click);
-	     rows.style('background-color',function(t) { return globals.selection[t.event_task_id] ?  "#ffffaa" : "#ffffff" ; });
+	     rows.style('background-color',function(t) { return globals.selection[t.task_id] ?  "#ffffaa" : "#ffffff" ; });
 		 rows.exit().remove();
 		 
 		 function task_click(t){
-		   if(globals.selection[t.event_task_id]){
-		     delete globals.selection[t.event_task_id];
+		   if(globals.selection[t.task_id]){
+		     delete globals.selection[t.task_id];
 		   }else{
-		     globals.selection[t.event_task_id] = true;
+		     globals.selection[t.task_id] = true;
 		   }
 		   update_event_table(globals.get_event_tasks);
 		 }

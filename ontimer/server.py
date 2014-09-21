@@ -45,6 +45,7 @@ def read_stream(run, idx, fd, events):
 
 class Run:
     def __init__(self,state, task):
+        log.info( 'started state=%r task=%r' % ( state , task) )
         self.state = state
         self.task = task
         self.update_task( _run_count = task['run_count'] + 1 , _task_status = event.TaskStatus.running )
@@ -53,9 +54,10 @@ class Run:
         self.task_vars = event.task_vars(self.task)
         self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         self.finished = False
+        log.info( 'self=%r' % ( self ) )
         os.makedirs(self.rundir)
         self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
-        log.info( 'started task_id=%d cmd=%s' % ( self.task['event_task_id'], self.task_state['cmd']))
+        log.info( 'started task_id=%d cmd=%s' % ( self.task['task_id'], self.task_state['cmd']))
         self.streams = ( 
              [ set_non_blocking(self.process.stdout), None, 0, 'out'],
              [ set_non_blocking(self.process.stderr), None, 0, 'err'],
@@ -76,19 +78,19 @@ class Run:
     def storeArtifacts(self, **kwargs):
         for k in kwargs:
             self.state.dao.store_artifact(
-                      utils.quict(event_task_id=self.task['event_task_id'], 
+                      utils.quict(task_id=self.task['task_id'], 
                             run=self.task['run_count'], 
                             name=k, value=kwargs[k]))
 
     def addArtifactScore(self, *args, **kwargs):
         for i in range(0,len(args),2):
             self.state.dao.add_artifact_score(
-                      utils.quict(event_task_id=self.task['event_task_id'], 
+                      utils.quict(task_id=self.task['task_id'], 
                             run=self.task['run_count'], 
                             name=args[i], score=args[i+1]))
         for k in kwargs:
             self.state.dao.add_artifact_score(
-                      utils.quict(event_task_id=self.task['event_task_id'], 
+                      utils.quict(task_id=self.task['task_id'], 
                             run=self.task['run_count'], 
                             name=k, score=kwargs[k]))
             
@@ -99,7 +101,7 @@ class Run:
             self.finished = True
             # clean up
             rc = self.process.returncode
-            log.info( 'finished rc=%d task_id=%d' % (rc , self.task['event_task_id']))
+            log.info( 'finished rc=%d task_id=%d' % (rc , self.task['task_id']))
             self.storeArtifacts(finished='status',return_code = rc)
             if rc == 0:
                 self.update_task(_task_status = event.TaskStatus.success,_last_run_outcome = event.RunOutcome.success )

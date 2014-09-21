@@ -1,7 +1,5 @@
 '''
-Created on Jun 21, 2014
-
-@author: sergeyk
+Events, Tasks and related stuff
 '''
 from enum import IntEnum,Enum
 import yaml
@@ -21,7 +19,7 @@ def joinEnumsIndicesExcept(e,meta):
 
 def task_vars(task):
     tvars = event_vars(task)
-    tvars.update( event_task_id  = int(task['event_task_id']), run = int(task['run_count']) )
+    tvars.update( task_id  = int(task['task_id']), run = int(task['run_count']) )
     return tvars
 
 def event_vars(event):
