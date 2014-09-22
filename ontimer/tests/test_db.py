@@ -63,6 +63,11 @@ def test_active_events():
     dao.get_event_tasks()
     
 def test_get_tasks_to_run():
+    tracker = []
+    cache = event.EventTaskCache([lambda a,b: tracker.append(1)])
+    dao.update_event_tasks_cache(cache)
+    eq_(1,len(tracker))
+    
     r=dao.get_tasks_to_run()
     eq_(1,len(r))
     t1 = r[0]
@@ -83,15 +88,31 @@ def test_get_tasks_to_run():
     dao.add_artifact_score(score)
     artifact['value'] = 'vv'
     dao.store_artifact(artifact)
+
+    dao.update_event_tasks_cache(cache)
+    eq_(1,len(tracker))
+
     t1['_task_status'] = event.TaskStatus.running
     eq_(True,dao.update_task(t1))
+    
+    dao.update_event_tasks_cache(cache)
+    eq_(2,len(tracker))
+
     r=dao.get_tasks_to_run()
     eq_(0,len(r))
     t1['_task_status'] = event.TaskStatus.success
     eq_(False,dao.update_task(t1))
+
+    dao.update_event_tasks_cache(cache)
+    eq_(2,len(tracker))
+
     t1 = dao.load_task(t1)
     t1['_task_status'] = event.TaskStatus.success
     eq_(True,dao.update_task(t1))
+
+    dao.update_event_tasks_cache(cache)
+    eq_(3,len(tracker))
+
     r=dao.get_tasks_to_run()
     eq_(1,len(r))
     t2 = r[0]
@@ -101,10 +122,15 @@ def test_get_tasks_to_run():
     eq_(1,len(events))
     ev = events[0]
 #     ev=events[1]
+    dao.update_event_tasks_cache(cache)
+    eq_(3,len(tracker))
+
     ev['_event_status']=event.EventStatus.fail
     eq_(True,dao.update_event(ev))
     dao.load_task({'task_id':et_id2})
     
+    dao.update_event_tasks_cache(cache)
+    eq_(4,len(tracker))
  
 def test__fetch_tree():
     query_result = [[1,1,1],[1,2,1],[1,2,2],[1,2,1],[2,1,1],[3,1,2]]

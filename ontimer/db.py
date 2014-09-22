@@ -10,15 +10,15 @@ default_filename = '.ontimer'
 
 _TBL = 0
 _PK  = 1
-#           Table(_TBL)          PKey(_PK)
-_TYPE =     'event_type',        'event_type_id'
-_EVENT =    'event',             'event_id'
-_TASK =     'task',              'task_id'
-_PREREQ =   'task_prereq',       'prereq_id'
-_TASKTYPE = 'task_type',         'task_type_id'
+#            Table(_TBL)          PKey(_PK)
+_EVENTTYPE = 'event_type',        'event_type_id'
+_EVENT =     'event',             'event_id'
+_TASK =      'task',              'task_id'
+_PREREQ =    'task_prereq',       'prereq_id'
+_TASKTYPE =  'task_type',         'task_type_id'
 
 def _conn_decorator(f):
-    def magic(self, *args, **kwargs):
+    def decorated(self, *args, **kwargs):
         if kwargs.get('conn'):
             if 'cursor' not in kwargs:
                 kwargs['cursor']=kwargs.get('conn').cursor()
@@ -31,7 +31,7 @@ def _conn_decorator(f):
                 return f(self,*args,**kwargs)
             finally:
                 conn.close()
-    return magic
+    return decorated
 
 def _fetch_all(cursor, result = None, query=None):
     if query:
@@ -145,17 +145,20 @@ class Dao:
     @_conn_decorator
     def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
         cutoff = cutoff or  utils.utc_adjusted(hours=-72) 
-        where = 'and (event.event_status in (%s) or event.scheduled_dt > ?) ' % event.joinEnumsIndices(event.EventStatus,event.MetaStates.active)
+        where = 'and (event.updated_dt > ? or event.scheduled_dt > ?) ' 
         query ="select %s from %s where %s and %s %s order by %s" % (
-            _selectors(_TYPE, _EVENT, _TASK, _TASKTYPE),
-            _froms(_TYPE, _EVENT, _TASK, _TASKTYPE),
-            _joins(_TYPE, _EVENT, _TASK), _joins(_TASKTYPE, _TASK), where, 
+            _selectors(_EVENTTYPE, _EVENT, _TASK, _TASKTYPE),
+            _froms(_EVENTTYPE, _EVENT, _TASK, _TASKTYPE),
+            _joins(_EVENTTYPE, _EVENT, _TASK), _joins(_TASKTYPE, _TASK), where, 
             'event.scheduled_dt DESC, event.event_id, task.task_id')
-        cursor.execute(query,(cutoff,))
+        cursor.execute(query,(cutoff,cutoff))
         events = _fetch_tree(cursor,((_TASK[_PK],'tasks'),) )
         tasks = [ t for e in events for t in e['tasks'] ]
         alltasks = { task[_TASK[_PK]] : task for task in tasks }
-        dependenies = cursor.execute(_simple_join((_TYPE, _EVENT, _TASK, _PREREQ), 'task_prereq.before_task_id, task_prereq.task_id' , where = where ),(cutoff,))
+        dep_q = _simple_join((_EVENT, _TASK, _PREREQ), 
+                             'task_prereq.before_task_id, task_prereq.task_id' , 
+                             where = where + ' order by 1, 2')
+        dependenies = cursor.execute(dep_q,(cutoff,cutoff))
         for d in dependenies:
             task=alltasks[d[1]]
             if 'depend_on' in task:
@@ -163,6 +166,11 @@ class Dao:
             else:
                 task['depend_on'] = [d[0]]
         return events, alltasks
+
+    @_conn_decorator
+    def update_event_tasks_cache(self, cache , cutoff = None, cursor = None, conn=None):
+        cutoff = cutoff or  utils.utc_adjusted(days=-31) 
+        cache.update(*self.get_event_tasks(cutoff,cursor=cursor,conn=conn))
          
     @_conn_decorator
     def get_tasks_to_run(self, cursor=None, conn=None):
@@ -250,10 +258,9 @@ class Dao:
              task_status = :task_status
             ''' % set_vars, newtask)
         if cursor.rowcount == 1 :
-            cursor.execute('''update event set 
-                 updated_dt = :utc_now 
-                 where
-                 event_id = :event_id
+            cursor.execute('''update event 
+                set  updated_dt = :utc_now 
+                where event_id = :event_id
                 ''', newtask)
             if cursor.rowcount == 1 :
                 conn.commit()

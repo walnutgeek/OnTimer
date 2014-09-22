@@ -15,13 +15,16 @@ ToDo
        * event_task*->task* 
      * add updated_dt to event and change it on every task update
      * update db_model.pdf
+  * cache superset of u31 and s31 ***
    
 ##Now
-    * cache superset of u31 and s31
-    * implement subscriptions tracker object on server side
-    * event summary
-    * task summary
-    * implement log subscription
+  * data propagation tree subscribers and filters 
+  	* design
+  	* implementaion
+    * implement subscriptions tracker object on server side with data propagation tree.
+  * event summary
+  * task summary
+  * implement log subscription
   * Screens
     * Screen: Event summary 
     * Screen: Task Screen

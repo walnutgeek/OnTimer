@@ -281,9 +281,28 @@ class Generator:
             event_start_dt = self.logic.on_time.toUtc(next_onstate)
             return self._create_event(dt,event_start_dt)
         return None
-            
-            
+
+class EventTaskCache:
+    def __init__(self,observers=None):
+        self.events=[]
+        self.tasks={}
+        self.observers = observers or []
         
+    def add_observer(self,observer):
+        self.observers.append(observer)
+    
+    def delete_observer(self,observer):
+        self.observers.remove(observer)
+
+    def _update(self, _events, _tasks):
+        self.events = _events
+        self.tasks = _tasks
+        for observer in self.observers:
+            observer(_events, _tasks)
+
+    def update(self,_events,_tasks):
+        if len(self.events) != len(_events) or self.events != _events :
+            self._update(_events, _tasks)
         
         
                 
