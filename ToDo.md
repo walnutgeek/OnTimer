@@ -15,7 +15,7 @@ ToDo
        * event_task*->task* 
      * add updated_dt to event and change it on every task update
      * update db_model.pdf
-  * cache superset of u31 and s31 ***
+  * cache superset of u31 and s31 
    
 ##Now
   * data propagation tree subscribers and filters 
