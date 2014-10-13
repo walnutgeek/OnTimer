@@ -75,14 +75,14 @@ def test_get_tasks_to_run():
     eq_(1,et_id)
     artifact = { 'task_id' : et_id, 
                  'run' : 1,
-                'name' : 'key',
-                'value' : 'value'
+                 'name' : 'key',
+                 'value' : 'value'
             }
     dao.store_artifact(artifact)
     score = { 'task_id' : et_id,
-               'run' : 1,
-               'name' : 'score',
-               'score' : 17 }
+              'run' : 1,
+              'name' : 'score',
+              'score' : 17 }
     dao.add_artifact_score(score)
     score['score'] = 21
     dao.add_artifact_score(score)

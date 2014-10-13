@@ -16,8 +16,14 @@ ToDo
      * add updated_dt to event and change it on every task update
      * update db_model.pdf
   * cache superset of u31 and s31 
+  * key_group_value
+    * write class
    
 ##Now
+  * key_group_value
+    * write tests
+      * generic test (70% missing t
+      * kval test
   * data propagation tree subscribers and filters 
   	* design
   	* implementaion

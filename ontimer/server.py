@@ -165,7 +165,7 @@ class State:
         if client not in self.clients:
             self.clients.append(client)
             self.pushToOne(client, self.meta_json)
-            self.pushToOne(client,self.json)
+            self.pushToOne(client, self.json)
 
     def removeClient(self,client):
         if client in self.clients:
@@ -187,6 +187,9 @@ class SocketHandler(websocket.WebSocketHandler):
         
     def open(self):
         state.addClient(self)
+    
+    def on_message(self,msg):
+        pass
     
 
     def on_close(self):
