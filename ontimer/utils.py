@@ -61,7 +61,7 @@ class KeyCmpMixin(object):
         return not (self < other)
 
 
-class key_group_value:
+class KeyGroupValue:
     def __init__(self,kval_producer = None):
         self.kval_producer = kval_producer
         self.key_map = {}

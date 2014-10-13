@@ -151,31 +151,6 @@ class Propagator:
             self.data = transform
             self.callback(transform)
  
-class Broadcast:
-    ''' broad cast update call to multiple observers. observer is method 
-    that accept single argument with data passed to update(data)'''
-    def __init__(self):
-        self.bypath = defaultdict(dict)
-        self.bygroup = defaultdict(set)
-
-    def update(self,data):
-        for observer in self.observers:
-            observer(data)
-
-    def add_observer(self,path,group,callback):
-        if not( observer in self.observers): 
-            self.observers.add(observer)
-        if observer_group:
-            self.observer_groups_dict[observer_group].add(observer)
-
-    def delete_observer(self,observer):
-        if observer in self.observers: 
-            self.observers.remove(observer)
-
-    def delete_observer_group(self,observer_group):
-        for to_del in self.observer_groups_dict[observer_group]:
-            self.delete_observer(to_del)
-        del self.observer_groups_dict[observer_group]
 
 class Subscriber:
     def __init__(self, publisher, client ):    

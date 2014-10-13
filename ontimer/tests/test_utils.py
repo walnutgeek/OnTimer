@@ -14,7 +14,7 @@ def test_utc_day_adjusted():
     eq_(adjhour.second,adjmin.second)
 
 def test_key_group_value():
-    kgv = utils.key_group_value()
+    kgv = utils.KeyGroupValue()
     
     kgv.put('k1','g1', 'v1')
     kgv.put('k2','g1', 'v2')
@@ -60,7 +60,7 @@ def test_key_group_value():
     eq_(kgv.keys(),['k2'])
     
 def test_kval_in_key_group_value():
-    kgv = utils.key_group_value(lambda k: k+'_')
+    kgv = utils.KeyGroupValue(lambda k: k+'_')
     
     kgv.put('k1','g1', 'v1')
     kgv.put('k2','g1', 'v2')
