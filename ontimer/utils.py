@@ -60,6 +60,10 @@ class KeyCmpMixin(object):
     def __ge__(self, other):
         return not (self < other)
 
+def broadcast(it, *args, **kwargs):
+    for callback  in it:
+        callback(*args,**kwargs)
+
 
 class KeyGroupValue:
     def __init__(self,kval_producer = None):
@@ -118,16 +122,18 @@ class KeyGroupValue:
 
     def delete_key(self, key):
         del self.key_group_map[key]
-        if key in self.key_map: 
-                del self.key_map[key]
+        self._delete_key_map_entry(key)
         self.inverse = None
 
+    def _delete_key_map_entry(self, key):
+        if key in self.key_map: 
+                del self.key_map[key]
+                
     def _delete_key_group(self, key, group):
         del self.key_group_map[key][group]
         if len(self.key_group_map[key]) == 0:
             del self.key_group_map[key]
-            if key in self.key_map: 
-                del self.key_map[key]
+            self._delete_key_map_entry(key)
             
 
     def delete_key_group(self, key, group):

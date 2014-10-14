@@ -132,5 +132,24 @@ def test_kval_in_key_group_value():
     except KeyError:
         pass
 
+def test_broadcast():
+    acc = ['','','','']
+    def append0(s):
+        acc[0] += s
+    def append1(s):
+        acc[1] += s
+    def append2(s):
+        acc[2] += s
+    def append3(s):
+        acc[3] += s
+    utils.broadcast([append0,append1],"Hello")
+    utils.broadcast([append2,append3],"Privet")
+    eq_(str(acc),"['Hello', 'Hello', 'Privet', 'Privet']")
+    utils.broadcast([append0,append3]," John")
+    utils.broadcast([append2]," sto")
+    utils.broadcast([append1,append2]," let")
+    utils.broadcast([append0,append1,append2,append3],"!")
+    eq_(str(acc),"['Hello John!', 'Hello let!', 'Privet sto let!', 'Privet John!']" )
+
     
     

@@ -139,14 +139,14 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
 DEFAULT_PATH = Path('')
 
 class Propagator:
-    ''' update will only call callback if data actually changed'''
+    ''' update will only propagate to callback if data actually changed'''
     def __init__(self, callback, transformation=lambda x:x):
         self.callback = callback
         self.transformation = transformation
         self.data = None
         
     def update(self,data):
-        transform=self.transformation(data)
+        transform = self.transformation(data)
         if self.data != transform:
             self.data = transform
             self.callback(transform)
@@ -165,6 +165,7 @@ class Subscriber:
         if self.topics != topics :
             self.topics = topics
             self.publisher.subscribe(self)
+
 
     
 class Publisher():
