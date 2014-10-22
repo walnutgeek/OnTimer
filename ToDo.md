@@ -18,12 +18,11 @@ ToDo
   * cache superset of u31 and s31 
   * key_group_value
     * write class
+    * write tests
+      * generic test 
+      * kval test
    
 ##Now
-  * key_group_value
-    * write tests
-      * generic test (70% missing t
-      * kval test
   * data propagation tree subscribers and filters 
   	* design
   	* implementaion
@@ -38,6 +37,7 @@ ToDo
   
    
 ##Later 
+  * Consider better name KeyGroupValue
    * Refactor 
      * websocket connection from javascript (no hard coding) 
    * Subscription

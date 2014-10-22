@@ -138,18 +138,6 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
 
 DEFAULT_PATH = Path('')
 
-class Propagator:
-    ''' update will only propagate to callback if data actually changed'''
-    def __init__(self, callback, transformation=lambda x:x):
-        self.callback = callback
-        self.transformation = transformation
-        self.data = None
-        
-    def update(self,data):
-        transform = self.transformation(data)
-        if self.data != transform:
-            self.data = transform
-            self.callback(transform)
  
 
 class Subscriber:
@@ -178,17 +166,17 @@ class Publisher():
     '''
     
     def __init__(self, provider):
-        self.pathcast = defaultdict(dict)
-        self.broadcast = Broadcast()
         self.provider = provider
-        self.propagator = Propagator(self.broadcast.update)
+        self.time_subscriptions = utils.KeyGroupValue(lambda path: utils.Propagator(path.filter) ) 
+        self.time_propagator = utils.Propagator(lambda data: utils.broadcast(self.time_subscriptions.kvals(), data))
+        self.log_subscriptions = utils.KeyGroupValue()
+        self.pathcast = defaultdict(dict)
+        self.propagator = utils.Propagator(self.broadcast.update)
     
     def check_provider(self):
-        self.propagator.update(self.provider.getdata(DEFAULT_PATH))
+        self.time_propagator.update(self.provider(DEFAULT_PATH))
     
     def subscribe(self, subscriber):
-        self.broadcast.delete_observer_group(subscriber.client)
-        
         for topic in subscriber.topics:
             if DEFAULT_PATH.isdecendant(topic):
                 propagator = Propagator(subscriber.updateClient,topic.filter)

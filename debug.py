@@ -1,11 +1,13 @@
+from __future__ import print_function
+from ontimer.utils import *
+
+'''
 from ontimer import event , utils, db
 from datetime import datetime
 dao=db.Dao('./root')
 config=dao.apply_config()
 gens = [event.Generator(config,gen_data) for gen_data in dao.load_active_generators()]
              
-
-'''
 $python -i debug.py
 import datetime
 dt=datetime.datetime(2014,9,15)
