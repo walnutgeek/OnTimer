@@ -3,6 +3,8 @@ OnTimer
 
 [![Build Status](https://travis-ci.org/walnutgeek/OnTimer.svg?branch=master)](https://travis-ci.org/walnutgeek/OnTimer)
 
+[![Documentation Status](https://readthedocs.org/projects/ontimer/badge/?version=latest)](https://readthedocs.org/projects/ontimer/?badge=latest)
+
 runs stuff on time
 
 [ToDo](ToDo.md)
