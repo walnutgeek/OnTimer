@@ -2,10 +2,19 @@
 """
 This module contains of various utility methods and classes.
 
+Examples on this page assume that you imported ``ontimer.utils``
+module content into current namespace. Something like::
+
+    from __future__ import print_function
+    from ontimer.utils import * # pollution of namespace. 
+    
+You should import conservatively only used components instead of ``*`` in real code.
+But at this time we are just fooling around. Anyway let's begin.
 
 """
 import datetime
 from collections import defaultdict, MutableMapping
+from sets import Set
 
 
 #: date format YYYY-MM-DD hh:mm:ss 
@@ -38,7 +47,7 @@ def toDateTime(s,formats=all_formats):
         >>> toDateTime('2014-10-21',(format_Ymd,))
         Traceback (most recent call last):
           File "<stdin>", line 1, in <module>
-          File "/Users/sergeyk/Documents/workspace/OnTimer/ontimer/utils.py", line 38, in toDateTime
+          File "./ontimer/utils.py", line 38, in toDateTime
             raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
         ValueError: ('Cannot parse "%s", tried %s', '2014-10-21', "('%Y%m%d',)")
         >>> 
@@ -55,15 +64,16 @@ def toDateTime(s,formats=all_formats):
     raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
 
 def utc_adjusted(**kwargs):
-    ''' return utc adjusted 
+    ''' return utc adjusted. Adjustments should follow conventions 
+        of  `datetime.timedelta` .
     
         >>> utc_adjusted()
         datetime.datetime(2014, 10, 22, 6, 19, 12, 73972)
         >>> utc_adjusted(hours=-5)
         datetime.datetime(2014, 10, 22, 1, 19, 28, 120858)
         >>> import datetime
-        >>> datetime.datetime.now()
-        datetime.datetime(2014, 10, 21, 23, 19, 59, 24108)
+        >>> datetime.datetime.utcnow()
+        datetime.datetime(2014, 10, 22, 6, 19, 59, 24108)
         >>>
     
     '''
@@ -111,7 +121,20 @@ class KeyCmpMixin(object):
 def broadcast(it, *args, **kwargs):
     ''' 
     call every element of collection ``it``
-    as function with parameters
+    as function with parameters:
+    
+    >>> lambdas=[lambda x: print( " l1 %r " % x ) ,lambda x: print( " l2 %r " % x )]
+    >>> broadcast(lambdas, '1')
+     l1 '1' 
+     l2 '1' 
+    >>> broadcast(lambdas, 2)
+     l1 2 
+     l2 2 
+    >>> broadcast(lambdas, 'three')
+     l1 'three' 
+     l2 'three' 
+    >>> 
+
     '''
     for callback  in it:
         callback(*args,**kwargs)
@@ -138,6 +161,77 @@ class Broadcast(list):
         call all functions with arguments provided: ``(*args,**kwargs)``
         '''
         broadcast(self, *args,**kwargs)
+
+class ProtectedDict(MutableMapping):
+    '''
+    Dictionary that restricts access to: update and delete operations
+    '''
+    def __init__(self, store, update=False, delete=False):
+        '''
+        * ``store``: dictionary to be protected. 
+        * ``update``: *boolean*  True will allow update.
+        * ``delete``: *boolean*  True will allow delete.
+        
+        >>> d={'a':'b', 'b':'c'}
+        >>> d
+        {'a': 'b', 'b': 'c'}
+        >>> pd=ProtectedDict(d)
+        >>> pd['x']='y'
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+          File "./ontimer/utils.py", line 162, in __setitem__
+            raise ValueError("__setitem__ not allowed: (k,v)=(%r,%r)" % ( key,value))
+        ValueError: __setitem__ not allowed: (k,v)=('x','y')
+        >>> pd=ProtectedDict(d,True,False)
+        >>> pd['x']='y'
+        >>> d
+        {'a': 'b', 'x': 'y', 'b': 'c'}
+        >>> pd
+        {'a': 'b', 'x': 'y', 'b': 'c'}
+        >>> del pd['x']
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+          File "./ontimer/utils.py", line 168, in __delitem__
+            raise ValueError("__delitem__ not allowed: k=%r" % key )
+        ValueError: __delitem__ not allowed: k='x'
+        >>> pd
+        {'a': 'b', 'x': 'y', 'b': 'c'}
+        >>> pd=ProtectedDict(d,True,True)
+        >>> del pd['x']
+        >>> pd
+        {'a': 'b', 'b': 'c'}
+        >>> 
+        '''
+        self.store = store
+        self._access=(update,delete)
+        
+    def __getitem__(self, key):
+        return self.store[key]
+
+    def __setitem__(self, key, value):
+        if self._access[0]:
+            self.store[key] = value
+        else:
+            raise ValueError("__setitem__ not allowed: (k,v)=(%r,%r)" % ( key,value))
+
+    def __delitem__(self, key):
+        if self._access[1]:
+            del self.store[key]
+        else:
+            raise ValueError("__delitem__ not allowed: k=%r" % key )
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+    def __str__(self):
+        return self.store.__str__()
+    def __repr__(self):
+        return self.store.__repr__()
             
 class NiceDict(MutableMapping):
     '''
@@ -269,88 +363,155 @@ class Propagator:
 
 
 
-class KeyGroupValue:
-    def __init__(self,kval_producer = None):
-        self.kval_producer = kval_producer
-        self.key_map = {}
-        self.key_group_map = {}
-        self.inverse = None
-
-    def keys(self):
-        return self.key_group_map.keys()
-
-    def kvals(self):
-        return self.key_map.values()
-
-    def keys_by_group(self,group):
-        return self._inverse()[group]
+class ABDict:
+    ''' 
+    ABDict - is two level dictionary.  Two levels named: ``A`` and ``B``. 
+    Therefore keys  are: ``akey`` and ``bkey``.
+     
+    It allow to store ``ab_value`` for each unique combination 
+    ``akey`` and ``bkey``. Additionaly you may want store : ``a_value`` one for each ``akey``, or 
+    ``b_value`` one for each bkey. 
+    All these values could be created on automatically if appropriate default factory 
+    defined on instance creation. 
     
-    def get_groups(self, key):
-        return self.key_group_map[key]
- 
-    def contains(self, key, group):
-        return key in self.key_group_map and group in self.key_group_map[key]
+    
+    ``ABDict`` does not adhere to ``dict()`` interface, rather contains 4 dictionaries that 
+    synchronized between themself:
+    
+    * ``d.akeys[bkey]`` -> set akeys that defined in for bkey  - actions: ``read``
+    * ``d.a[akey]`` -> ``a_value`` - access: ``read``, ``update``
+    * ``d.b[akey]`` -> ``b_value`` - access: ``read``, ``update``
+    * ``d.ab[akey][bkey]`` -> ab_value - access: ``read``, ``update``, ``delete`` 
+
+    ``d.a``, ``d.b`` automaticaly extend or shink as ``akey``  or ``bkey``   
+    introduced or removed in/from ``d.ab``. Because ``d.a`` ,and ``d.b`` are `NiceDict`  
+    instances, so you can subscribe on changes in them.
+    
+    >>> d=ABDict(a_value_factory=lambda akey: 'akey %r' % akey,
+    ... b_value_factory=lambda akey: 'bkey %r' % akey,
+    ... ab_value_factory=lambda akey,bkey: 'akey %r , bkey %r' % (akey,bkey))
+    >>> d.ab[3]['x']
+    "akey 3 , bkey 'x'"
+    >>> d.ab[5]['x']='something else'
+    >>> d.ab[3]['y']
+    "akey 3 , bkey 'y'"
+    >>> d.ab[3]['z']
+    "akey 3 , bkey 'z'"
+    >>> d.ab[4]['z']
+    "akey 4 , bkey 'z'"
+    >>> d.ab[5]['z']
+    "akey 5 , bkey 'z'"
+    >>> d.ab
+    {3: {'y': "akey 3 , bkey 'y'", 'x': "akey 3 , bkey 'x'", 'z': "akey 3 , bkey 'z'"}, 
+     4: {'z': "akey 4 , bkey 'z'"}, 5: {'x': 'something else', 'z': "akey 5 , bkey 'z'"}}
+    >>> d.a
+    {3: 'akey 3', 4: 'akey 4', 5: 'akey 5'}
+    >>> d.b
+    {'y': "bkey 'y'", 'x': "bkey 'x'", 'z': "bkey 'z'"}
+    >>> d.akeys
+    defaultdict(<class 'sets.Set'>, {'y': Set([3]), 'x': Set([3, 5]), 'z': Set([3, 4, 5])})
+    
+    You can override default ``a_value``:
+    
+    >>> d.a[4]='another value'
+    >>> d.a
+    {3: 'akey 3', 4: 'another value', 5: 'akey 5'}
+    
+    You can delete single ``ab_value`` for unique combination ``akey`` and ``bkey``:
+    
+    >>> del d.ab[3]['x']
+    >>> d.ab
+    {3: {'y': "akey 3 , bkey 'y'", 'z': "akey 3 , bkey 'z'"}, 4: {'z': "akey 4 , bkey 'z'"}, 
+     5: {'x': 'something else', 'z': "akey 5 , bkey 'z'"}}
+    >>> d.b
+    {'y': "bkey 'y'", 'x': "bkey 'x'", 'z': "bkey 'z'"}
+    
+    If you want to delete all entries with given ``akey``, 
+    you cannot delete whole 2nd level dictionary. Rather you 
+    have to use `delete_by_akey` method:
+    
+    >>> del d.ab[3]
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "./ontimer/utils.py", line 221, in __delitem__
+        raise ValueError("__delitem__ not allowed: k=%r" % key )
+    ValueError: __delitem__ not allowed: k=3
+    >>> d.delete_by_akey(3)
+    >>> d.ab
+    {4: {'z': "akey 4 , bkey 'z'"}, 5: {'x': 'something else', 'z': "akey 5 , bkey 'z'"}}
+    >>> d.b
+    {'x': "bkey 'x'", 'z': "bkey 'z'"}
+    >>> d.a
+    {4: 'another value', 5: 'akey 5'}
+    
+    Also  there is simular method to delete all entries with given ``bkey``:
+    
+    >>> d.delete_by_bkey('z')
+    >>> d.ab
+    {5: {'x': 'something else'}}
+    >>> d.a
+    {5: 'akey 5'}
+    >>> d.b
+    {'x': "bkey 'x'"}
+    >>> d.akeys
+    defaultdict(<class 'sets.Set'>, {'x': Set([5])})
+    >>> 
+
+    '''
+    def __init__(self, a_value_factory = None, b_value_factory=None, ab_value_factory=None):
+
+        def onempty_B(d):
+            akey = d.dictId
+            del self._ab[akey]
+            if akey in self.a:
+                del self.a[akey]
+
+        def onset_B(d, bkey ,v):
+            akey = d.dictId
+            if v is None and ab_value_factory is not None:
+                d.store[bkey] = ab_value_factory(akey,bkey)
+            self._inverse[bkey].add(akey)
+            if b_value_factory is not None and bkey not in self.b:
+                self.b[bkey]=b_value_factory(bkey)
+
+        def ondelete_B(d, bkey, v):
+            akey = d.dictId
+            s=self._inverse[bkey]
+            s.remove(akey)
+            if len(s)==0:
+                del self._inverse[bkey]  
+                if bkey in self.b:
+                    del self.b[bkey]  
+
+        def onset_A(d,akey,v):
+            if a_value_factory is not None and akey not in self.a:
+                self.a[akey]=a_value_factory(akey)
+
+        def defvalue_A(akey):
+            return NiceDict(dictId=akey,
+                            defvalue=lambda bkey: None, 
+                            onset=onset_B, 
+                            ondelete=ondelete_B,
+                            onempty=onempty_B ) 
         
-    def get(self, key, group):
-        return self.key_group_map[key][group]
+        self._inverse = defaultdict(Set)
+        self.akeys = ProtectedDict(self._inverse)
+        self.a = NiceDict()
+        self.b = NiceDict()
+        self._ab = NiceDict(defvalue=defvalue_A, onset=onset_A )
+        self.ab = ProtectedDict(self._ab)
     
-    def put(self, key, group, value):
-        if key not in self.key_group_map:
-            self.key_group_map[key]={ group : value }
-            if self.kval_producer:
-                self.key_map[key]=self.kval_producer(key)
-        else:
-            self.key_group_map[key][group]=value
-        self.inverse = None
-
-    def get_kval(self, key):
-        return self.key_map[key]
-    
-    def has_kval(self, key):
-        return key in self.key_map
-    
-    def set_kval(self, key, kval):
-        if key not in self.key_group_map:
-            raise KeyError("%r key not in key_group_map" % key)
-        self.key_map[key] = kval
+    def delete_by_akey(self, akey):
+        ''' Delete all entries with given ``akey`` '''
+        if akey in self._ab:
+            bkeys = list(self._ab[akey].keys())
+            for bkey in bkeys:
+                del self._ab[akey][bkey]
         
-    def del_kval(self, key):
-        del self.key_map[key]
-        
-    def _inverse(self):
-        if None == self.inverse:
-            inverse = defaultdict(set)
-            for k in self.key_group_map:
-                for g in self.key_group_map[k]:
-                    inverse[g].add(k)
-            self.inverse = inverse
-        return self.inverse
-        
-
-    def delete_key(self, key):
-        del self.key_group_map[key]
-        self._delete_key_map_entry(key)
-        self.inverse = None
-
-    def delete_key_group(self, key, group):
-        self._delete_key_group(key, group)
-        self.inverse = None
-    
-    def delete_group(self, group):
-        keys = self.keys_by_group(group)
-        for key in keys:
-            self._delete_key_group(key, group)
-        self.inverse = None
-    
-    def _delete_key_map_entry(self, key):
-        if key in self.key_map: 
-            del self.key_map[key]
-                
-    def _delete_key_group(self, key, group):
-        del self.key_group_map[key][group]
-        if len(self.key_group_map[key]) == 0:
-            del self.key_group_map[key]
-            self._delete_key_map_entry(key)
-            
-        
+    def delete_by_bkey(self, bkey):
+        ''' Delete all entries with given ``bkey`` '''
+        if bkey in self.akeys:
+            akeys = list(self.akeys[bkey])
+            for akey in akeys:
+                del self.ab[akey][bkey]
         

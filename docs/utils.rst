@@ -27,7 +27,13 @@ OnTimer Utils
   .. autoclass:: Broadcast
      :members:
   
+  .. autoclass:: ProtectedDict
+     :members:
+
   .. autoclass:: NiceDict
+     :members:
+
+  .. autoclass:: ABDict
      :members:
  
   .. automethod:: ontimer.utils.pass_thru_transformation
@@ -36,8 +42,6 @@ OnTimer Utils
  
  
  
-  .. autoclass:: KeyGroupValue
-     :members:
   
   Object identification mixins
   ----------------------------

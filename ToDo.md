@@ -21,6 +21,7 @@ ToDo
     * write tests
       * generic test 
       * kval test
+  * document and test on ontimer.utils module
    
 ##Now
   * data propagation tree subscribers and filters 

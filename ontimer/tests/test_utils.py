@@ -13,124 +13,37 @@ def test_utc_day_adjusted():
     eq_(adjhour.minute,adjmin.minute)
     eq_(adjhour.second,adjmin.second)
 
-def test_key_group_value():
-    kgv = utils.KeyGroupValue()
-    
-    kgv.put('k1','g1', 'v1')
-    kgv.put('k2','g1', 'v2')
-    kgv.put('k1','g2', 'v3')
-    
-    eq_(kgv.get('k1','g1'),'v1')
-    eq_(kgv.get('k2','g1'),'v2')
-    eq_(kgv.get('k1','g2'),'v3')
-    
+def test_abdict():
+    d=utils.ABDict(a_value_factory=lambda akey: 'akey %r' % akey,
+        b_value_factory=lambda akey: 'bkey %r' % akey,
+        ab_value_factory=lambda akey,bkey: 'akey %r , bkey %r' % (akey,bkey))
+    eq_(str(d.ab[3]['x']),"akey 3 , bkey 'x'")
+    d.ab[5]['x']='something else'
+    eq_(str(d.ab[3]['y']),"akey 3 , bkey 'y'")
+    eq_(str(d.ab[3]['z']),"akey 3 , bkey 'z'")
+    eq_(str(d.ab[4]['z']),"akey 4 , bkey 'z'")
+    eq_(str(d.ab[5]['z']),"akey 5 , bkey 'z'")
+    eq_(str(d.ab),'{3: {\'y\': "akey 3 , bkey \'y\'", \'x\': "akey 3 , bkey \'x\'", \'z\': "akey 3 , bkey \'z\'"}, 4: {\'z\': "akey 4 , bkey \'z\'"}, 5: {\'x\': \'something else\', \'z\': "akey 5 , bkey \'z\'"}}')
+    eq_(str(d.a),"{3: 'akey 3', 4: 'akey 4', 5: 'akey 5'}")
+    eq_(str(d.b), '{\'y\': "bkey \'y\'", \'x\': "bkey \'x\'", \'z\': "bkey \'z\'"}' )
+    eq_(str(d.akeys),"defaultdict(<class 'sets.Set'>, {'y': Set([3]), 'x': Set([3, 5]), 'z': Set([3, 4, 5])})" )
+    d.a[4]='another value'
+    eq_(str(d.a),"{3: 'akey 3', 4: 'another value', 5: 'akey 5'}")
     try:
-        kgv.get('k','g')
+        del d.ab[3]
         eq_(1,0) #fail
-    except KeyError:
+    except ValueError:
         pass
+    d.delete_by_akey(3)
+    eq_(str(d.ab),'{4: {\'z\': "akey 4 , bkey \'z\'"}, 5: {\'x\': \'something else\', \'z\': "akey 5 , bkey \'z\'"}}')
+    eq_(str(d.a), "{4: 'another value', 5: 'akey 5'}")
+    eq_(str(d.b), '{\'x\': "bkey \'x\'", \'z\': "bkey \'z\'"}')
     
-    eq_(kgv.keys_by_group('g1'),set(['k1','k2']))
-    eq_(kgv.keys_by_group('g2'),set(['k1']))
-    eq_(kgv.keys(),['k2', 'k1'])
+    d.delete_by_bkey('z')
+    eq_(str(d.a),"{5: 'akey 5'}")
+    eq_(str(d.b),'{\'x\': "bkey \'x\'"}')
+    eq_(str(d.akeys),"defaultdict(<class 'sets.Set'>, {'x': Set([5])})"  )
     
-    kgv.delete_key('k1')
-    
-    eq_(kgv.get('k2','g1'),'v2')
-    eq_(kgv.keys_by_group('g1'),set(['k2']))
-    eq_(kgv.keys(),['k2'])
-    
-    kgv.put('k1','g1', 'v1')
-    kgv.put('k1','g2', 'v3')
-    
-    kgv.delete_group('g1')
-    
-    eq_(kgv.get('k1','g2'),'v3')
-    eq_(kgv.keys_by_group('g2'),set(['k1']))
-    eq_(kgv.keys(),['k1'])
-    eq_(kgv.get_groups('k1'), {'g2': 'v3'})
-    
-    kgv.put('k1','g1', 'v1')
-    kgv.put('k2','g1', 'v2')
-    
-    kgv.delete_key_group('k1', 'g1')
-    eq_(kgv.keys(),['k2', 'k1'])
-
-    kgv.delete_key_group('k1', 'g2')
-    eq_(kgv.keys(),['k2'])
-    
-def test_kval_in_key_group_value():
-    kgv = utils.KeyGroupValue(lambda k: k+'_')
-    
-    kgv.put('k1','g1', 'v1')
-    kgv.put('k2','g1', 'v2')
-    kgv.put('k1','g2', 'v3')
-    
-    eq_(kgv.get('k1','g1'),'v1')
-    eq_(kgv.get('k2','g1'),'v2')
-    eq_(kgv.get('k1','g2'),'v3')
-    
-    try:
-        kgv.get('k','g')
-        eq_(1,0) #fail
-    except KeyError:
-        pass
-    
-    eq_(kgv.keys_by_group('g1'),set(['k1','k2']))
-    eq_(kgv.keys_by_group('g2'),set(['k1']))
-    eq_(kgv.keys(),['k2', 'k1'])
-    eq_(kgv.get_kval('k2'),'k2_')
-    eq_(kgv.get_kval('k1'),'k1_')
-    
-    kgv.delete_key('k1')
-    
-    eq_(kgv.get('k2','g1'),'v2')
-    eq_(kgv.keys_by_group('g1'),set(['k2']))
-    eq_(kgv.keys(),['k2'])
-    eq_(kgv.get_kval('k2'),'k2_')
-    
-    try:
-        kgv.get_kval('k1')
-        eq_(1,0) #fail
-    except KeyError:
-        pass
-    
-    kgv.put('k1','g1', 'v1')
-    kgv.put('k1','g2', 'v3')
-    
-    kgv.delete_group('g1')
-
-    eq_(kgv.get_kval('k1'),'k1_')
-    try:
-        kgv.get_kval('k2')
-        eq_(1,0) #fail
-    except KeyError:
-        pass
-    
-    eq_(kgv.get('k1','g2'),'v3')
-    eq_(kgv.keys_by_group('g2'),set(['k1']))
-    eq_(kgv.keys(),['k1'])
-    eq_(kgv.get_groups('k1'), {'g2': 'v3'})
-    
-    kgv.put('k1','g1', 'v1')
-    kgv.put('k2','g1', 'v2')
-    
-    kgv.delete_key_group('k1', 'g1')
-    eq_(kgv.keys(),['k2', 'k1'])
-
-    eq_(kgv.get_kval('k2'),'k2_')
-    eq_(kgv.get_kval('k1'),'k1_')
-    
-    kgv.delete_key_group('k1', 'g2')
-    eq_(kgv.keys(),['k2'])
-
-    eq_(kgv.get_kval('k2'),'k2_')
-    
-    try:
-        kgv.get_kval('k1')
-        eq_(1,0) #fail
-    except KeyError:
-        pass
 
 def test_broadcast():
     acc = ['','','','']

@@ -64,7 +64,7 @@ extlinks = {
     }
 
 intersphinx_mapping = {
-    #'python': ('http://python.readthedocs.org/en/latest/', None),
+     'python': ('http://python.readthedocs.org/en/latest/', None),
     }
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
