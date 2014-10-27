@@ -14,3 +14,6 @@ install:
 
 # command to run tests
 script: nosetests --with-coverage --cover-package=ontimer
+
+after_success:
+  coveralls
