@@ -87,6 +87,9 @@ phrase = [adverbs, verbs, adjectives, nouns ]
 
 def warning(*objs):
     print("WARNING: ", *objs, file=sys.stderr)
+
+def gen_wordlist():
+    return [ m[randrange(len(m))] for m in phrase ]
     
 def main():
         
@@ -99,7 +102,7 @@ def main():
     
     for i in range(args.bs):
         sleep(args.delay * float(randrange(100)) / 50. )
-        wordlist = [ m[randrange(len(m))] for m in phrase ]
+        wordlist = gen_wordlist()
         if args.errvsout >=  float( randrange(100) )/100.0:
             warning( *wordlist)
         else:
@@ -108,10 +111,7 @@ def main():
     if args.freakout >=  float( randrange(100) )/100.0:
         rc = randrange(254)+1
         warning('freak out with: %d' % rc)
-        return rc
-    return 0
+        raise SystemExit(rc)
 
 if __name__ == '__main__':
-    raise SystemExit(main()) 
-
-   
+    main()    
