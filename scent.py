@@ -8,8 +8,9 @@ def py_files(filename):
 
 @runnable
 def execute_nose(*args):
-    return nose.run(argv=list(args))
+    #return nose.run(argv=list(args))
+    return 0 == os.system('nosetests --with-coverage --cover-package=ontimer')
 
-@runnable
+#@runnable
 def execute_sphinx(*args):
     return 0 == os.system('cd docs ; make')

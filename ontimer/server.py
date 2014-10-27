@@ -177,7 +177,7 @@ class State:
 
 class IndexHandler(web.RequestHandler):
     def get(self):
-        self.render("web/index.html")
+        self.render("web/app.html")
 
 class SocketHandler(websocket.WebSocketHandler):
     

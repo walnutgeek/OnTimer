@@ -1,6 +1,0 @@
-var utils = {
-    'BiMap' = function(){
-      
-    }
-    
-};

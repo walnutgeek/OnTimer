@@ -194,7 +194,7 @@
       $message.hide();
       $message.fadeIn("slow");
       $message.text('recieved message');
-      setTimeout(function(){$message.text('open') }, 2000)
+      setTimeout(function(){ $message.text('open') }, 2000)
       
       var json = JSON.parse(ev.data)
 	  
