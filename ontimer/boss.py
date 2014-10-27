@@ -108,7 +108,10 @@ def main():
     if args.freakout >=  float( randrange(100) )/100.0:
         rc = randrange(254)+1
         warning('freak out with: %d' % rc)
-        raise SystemExit(rc)
+        return rc
+    return 0
 
 if __name__ == '__main__':
-    main()    
+    raise SystemExit(main()) 
+
+   
