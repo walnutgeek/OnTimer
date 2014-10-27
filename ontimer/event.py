@@ -9,6 +9,7 @@ from . import utils
 import datetime
 import sys
 
+#
 global_config={}
 
 def joinEnumsIndices(e,meta): 
@@ -29,42 +30,53 @@ def event_vars(event):
     return evars
 
 def findEnum(enum,v):
+    ''' find enum by name or index 
+    
+    '''
     for e in list(enum):
         if e == v or e.value == v or e.name == v:
             return e
     raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
 
+def gen_doc_string(*args):
+    for enum in args:
+        enum.__doc__= 'enum: '+ ' , '.join('``%s``' % e.name for e in enum)
+
 class MetaStates(IntEnum):
-    all = 0
-    final = 1
-    active = 2
-    ready = 3
+    all = 0   
+    final = 1   
+    active = 2 
+    ready = 3 
+    
     
 class EventStatus(IntEnum):
-    active = 1
-    fail = 3
-    paused = 11
-    success = 101
-    skip = 102
+    active = 1     
+    fail = 3       
+    paused = 11    
+    success = 101  
+    skip = 102     
     
     def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10 , self.value <= 10][meta]
+
     
 class TaskStatus(IntEnum):
-    scheduled = 1
-    running = 2
-    fail = 3
-    retry = 4
-    paused = 11
-    success = 101
-    skip = 102
+    scheduled = 1   
+    running = 2     
+    fail = 3        
+    retry = 4       
+    paused = 11     
+    success = 101   
+    skip = 102      
 
     def isMetaStatus(self,meta): return [True,self.value > 100,self.value <= 10, self in (TaskStatus.scheduled,TaskStatus.retry) ][meta]
 
+
 class GeneratorStatus(IntEnum):
-    unset = 0 
-    running = 2
-    paused = 11
-    ontime = 20
+    unset = 0    #:
+    running = 2  #:
+    paused = 11  #:
+    ontime = 20  #:
+
 
 
 class RunOutcome(IntEnum):
@@ -90,11 +102,15 @@ class VarTypes(Enum):
     def toStr(self, v):
         return None if v is None else self.value[1](v) 
 
+gen_doc_string(MetaStates,EventStatus,TaskStatus,GeneratorStatus,RunOutcome,VarTypes)
+
 def enum_to_map(enum):
+    ''' convert enum to dict '''
     return { e.name: e.value for e in list(enum)} 
 
 def get_meta():
-    return {  'MetaStates' : enum_to_map(MetaStates),
+    ''' prepare map of maps for all relevant enums '''
+    return { 'MetaStates' : enum_to_map(MetaStates),
             'EventStatus' : enum_to_map(EventStatus),
             'TaskStatus' : enum_to_map(TaskStatus) }
             

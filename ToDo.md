@@ -21,7 +21,9 @@ ToDo
     * write tests
       * generic test 
       * kval test
-  * document and test on ontimer.utils module
+  * documentation 
+  	* document and test on ontimer.utils module
+  	* learn sphinx
    
 ##Now
   * data propagation tree subscribers and filters 
@@ -34,8 +36,10 @@ ToDo
   * Screens
     * Screen: Event summary 
     * Screen: Task Screen
-    
-  
+  * documentation 
+    * structure skeleton
+    * templates for all modules
+    * home page and quick start 
    
 ##Later 
   * Consider better name KeyGroupValue
