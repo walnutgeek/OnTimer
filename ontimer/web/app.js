@@ -1,7 +1,4 @@
-console.log("zest");
 $(function() {
-  console.log("test");
-
   var globals = {
     selection : {}
   };

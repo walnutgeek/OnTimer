@@ -91,16 +91,16 @@ def warning(*objs):
 def gen_wordlist():
     return [ m[randrange(len(m))] for m in phrase ]
     
-def main():
+def main(arglist):
         
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--freakout", type=float, default=.25, help='freak out probability.')
     parser.add_argument("--errvsout", type=float, default=.33, help='probability whether  boss speaks into stderr or in stdout.')
     parser.add_argument("--bs", type=int, default=5, help='how much BS boss will say')
     parser.add_argument("--delay", type=float, default=1., help='what average time delay between phrases .')
-    args = parser.parse_args()
+    args = parser.parse_args(arglist)
     
-    for i in range(args.bs):
+    for i in range(args.bs):  # @UnusedVariable
         sleep(args.delay * float(randrange(100)) / 50. )
         wordlist = gen_wordlist()
         if args.errvsout >=  float( randrange(100) )/100.0:
@@ -114,4 +114,4 @@ def main():
         raise SystemExit(rc)
 
 if __name__ == '__main__':
-    main()    
+    main(sys.argv[1:])    
