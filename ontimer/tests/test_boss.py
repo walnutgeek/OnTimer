@@ -10,15 +10,16 @@ def test_quickboss():
     class Devnull(object):
         def write(self, _): pass
     sys.stderr = Devnull()
+    cases=[
+           ['--delay','0', '--errvsout', '0'],
+           ['--delay','0', "--freakout",'2', '--errvsout', '2']
+           ]
     try:
-        try:
-            boss.main(['--delay','0', '--errvsout', '0'])
-        except SystemExit:
-            pass
-        try:
-            boss.main(['--delay','0', "--freakout",'2', '--errvsout', '2'])
-        except SystemExit:
-            pass
+        for c in cases:
+            try:
+                boss.main(c)
+            except SystemExit:
+                pass
     finally:
         sys.stderr = savestderr
        
