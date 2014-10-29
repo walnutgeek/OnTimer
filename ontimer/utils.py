@@ -226,8 +226,6 @@ class ProtectedDict(MutableMapping):
     def __len__(self):
         return len(self.store)
 
-    def __keytransform__(self, key):
-        return key
     def __str__(self):
         return self.store.__str__()
     def __repr__(self):
@@ -514,4 +512,22 @@ class ABDict:
             akeys = list(self.akeys[bkey])
             for akey in akeys:
                 del self.ab[akey][bkey]
-        
+
+def find_enum(enum,v):
+    '''
+    Find enum by name or by value (value is index in ``IntEnum``) or by itself. 
+    Method raise `ValueError` if enum class does not contain given name, value, 
+    nor such enum instance.  '''
+    for e in enum:
+        if e == v or e.value == v or e.name == v:
+            return e
+    raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
+
+def gen_doc_for_enums(*args):
+    '''Method generate docs strings for enums. Pass any namber of enum classes, 
+    all of them will be have ``__doc__`` appended with list of enum constants.
+    '''
+    for enum in args:
+        enum.__doc__ = ( enum.__doc__ if enum.__doc__ else '' ) +  ' , '.join('``%s``' % e.name for e in enum)
+
+

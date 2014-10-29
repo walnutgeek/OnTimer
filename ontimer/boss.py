@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 '''
-Boss - app printing random stuff and randomly freaks out.
+Boss 
+====
+
+app printing random stuff and randomly freaks out.
 
 Disclaimer: this application has noting to do with my previous or current bosses. All 
 similarities are coincidental.
@@ -91,13 +94,14 @@ def warning(*objs):
 def gen_wordlist():
     return [ m[randrange(len(m))] for m in phrase ]
     
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--freakout", type=float, default=.25, help='freak out probability.')
+parser.add_argument("--errvsout", type=float, default=.33, help='probability whether  boss speaks into stderr or in stdout.')
+parser.add_argument("--bs", type=int, default=5, help='how much BS boss will say')
+parser.add_argument("--delay", type=float, default=1., help='what average time delay between phrases .')
+
 def main(arglist):
-        
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--freakout", type=float, default=.25, help='freak out probability.')
-    parser.add_argument("--errvsout", type=float, default=.33, help='probability whether  boss speaks into stderr or in stdout.')
-    parser.add_argument("--bs", type=int, default=5, help='how much BS boss will say')
-    parser.add_argument("--delay", type=float, default=1., help='what average time delay between phrases .')
+    
     args = parser.parse_args(arglist)
     
     for i in range(args.bs):  # @UnusedVariable
@@ -112,6 +116,8 @@ def main(arglist):
         rc = randrange(254)+1
         warning('freak out with: %d' % rc)
         raise SystemExit(rc)
+
+main.__doc__ = parser.format_help()
 
 if __name__ == '__main__':
     main(sys.argv[1:])    

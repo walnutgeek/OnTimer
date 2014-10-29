@@ -43,6 +43,13 @@ OnTimer Utils
  
  
   
+  Enums
+  -----
+  
+  .. automethod:: ontimer.utils.find_enum
+  .. automethod:: ontimer.utils.gen_doc_for_enums
+  
+  
   Object identification mixins
   ----------------------------
 

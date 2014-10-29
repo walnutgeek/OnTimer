@@ -3,6 +3,14 @@ from nose.tools import eq_
 from .. import utils
 import datetime
 
+def expectError(err, action):
+    see_err = False
+    try: 
+        action()
+    except err:
+        see_err = True
+    eq_(see_err,True)
+
 def test_utc_day_adjusted():
     adjmin=utils.utc_adjusted(hours=-3*24)
     adjhour=utils.utc_adjusted(days=-3)
@@ -12,6 +20,31 @@ def test_utc_day_adjusted():
     eq_(adjhour.hour,adjmin.hour)
     eq_(adjhour.minute,adjmin.minute)
     eq_(adjhour.second,adjmin.second)
+
+def test_toDateTime():
+    dt=datetime.datetime(2014,10,10)
+    eq_(utils.toDateTime(dt),dt)
+    expectError(ValueError, lambda: utils.toDateTime('abc'))
+
+def test_quict():
+    eq_( { 'x':5}, utils.quict(x = 5 ))
+
+def test_mixins():
+    class MyInt(utils.KeyEqMixin,utils.KeyCmpMixin):
+        def __init__(self,i):
+            self.i = i
+        def __key__(self): 
+            return self.i
+    a = MyInt(1)
+    b = MyInt(2)
+    x = {}
+    x[a] = b
+    eq_( a == b , False)
+    eq_( a != b , True)
+    eq_( a > b , False)
+    eq_( a < b , True)
+    eq_( a <= b , True)
+    eq_( a >= b , False)
 
 def test_abdict():
     d=utils.ABDict(a_value_factory=lambda akey: 'akey %r' % akey,
@@ -45,6 +78,62 @@ def test_abdict():
     eq_(str(d.akeys),"defaultdict(<class 'sets.Set'>, {'x': Set([5])})"  )
     
 
+def test_ProtectedDict():
+    i = 0
+    pd = utils.ProtectedDict({2:5})
+    try:
+        pd[3]=4
+    except ValueError:
+        i+=1
+    eq_(1,i)
+    try:
+        del pd[2]
+    except ValueError:
+        i+=1
+    eq_(2,i)
+    pd = utils.ProtectedDict({},True,True)
+    pd[3]=4
+    eq_(pd[3],4)
+    eq_(len(pd),1)
+    eq_(repr(pd),'{3: 4}' )
+    eq_(list(pd.iterkeys()),[3] )
+    del pd[3]
+    eq_(len(pd),0)
+    
+    
+    
+    
+    
+def test_propagator():
+    arr = []
+    p=utils.Propagator(lambda x: arr.append(x))
+    p.update(5)
+    eq_(5,arr[-1])
+    eq_(1,len(arr))
+    p.update(5)
+    eq_(1,len(arr))
+    p.update(6)
+    eq_(6,arr[-1])
+    eq_(2,len(arr))
+    p.update(6)
+    eq_(6,arr[-1])
+    eq_(2,len(arr))
+    p.update(6)
+    eq_(6,arr[-1])
+    eq_(2,len(arr))
+    p.update(7)
+    eq_(7,arr[-1])
+    eq_(3,len(arr))
+    p.update(7)
+    eq_(7,arr[-1])
+    eq_(3,len(arr))
+    p.update(7)
+    eq_(7,arr[-1])
+    eq_(3,len(arr))
+    p.update(7)
+    eq_(7,arr[-1])
+    eq_(3,len(arr))
+
 def test_broadcast():
     acc = ['','','','']
     def append0(s):
@@ -64,5 +153,53 @@ def test_broadcast():
     utils.broadcast([append0,append1,append2,append3],"!")
     eq_(str(acc),"['Hello John!', 'Hello let!', 'Privet sto let!', 'Privet John!']" )
 
+from enum import IntEnum,Enum
+
+def test_enums():
+    class GeneratorStatus(IntEnum):
+        'Choices are:'
+        unset = 0 
+        running = 2 
+        paused = 11  
+        ontime = 20
+        
+    class VarTypes(Enum):
+        STR = (lambda s: s,      
+               lambda s: str(s))
+        INT = (lambda s: int(s), 
+               lambda i: str(i))
+        FLOAT = (lambda s: float(s), 
+                 lambda f: str(f))
+        DATETIME = (lambda s: utils.toDateTime(s,utils.all_formats),
+                    lambda dt: dt.strftime(utils.format_Y_m_d_H_M_S))
+    utils.gen_doc_for_enums(VarTypes,GeneratorStatus)
     
+    eq_(GeneratorStatus.__doc__,'Choices are:``unset`` , ``running`` , ``paused`` , ``ontime``')
+    
+    eq_(VarTypes.__doc__,'``INT`` , ``STR`` , ``FLOAT`` , ``DATETIME``' )
+    
+    def expectValueError(e, *args):
+        i=0
+        for a in args:
+            try: 
+                utils.find_enum(e, a)
+            except ValueError:
+                i+=1
+        return i == len(args)
+    
+    eq_(True, expectValueError(GeneratorStatus, 'STR', 17, VarTypes.INT))
+    eq_(True, expectValueError(VarTypes, 'STR_', 17, GeneratorStatus.unset))
+
+    eq_(GeneratorStatus.paused,utils.find_enum(GeneratorStatus, GeneratorStatus.paused))
+    eq_(GeneratorStatus.paused,utils.find_enum(GeneratorStatus, 'paused'))
+    eq_(GeneratorStatus.paused,utils.find_enum(GeneratorStatus, 11))
+    
+    eq_(VarTypes.STR,utils.find_enum(VarTypes, VarTypes.STR))
+    eq_(VarTypes.INT,utils.find_enum(VarTypes, 'INT'))
+    
+    
+    
+                
+        
+   
     

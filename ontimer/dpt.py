@@ -12,6 +12,11 @@ from collections import defaultdict
 
 
 class Letty(Enum):
+    ''' 
+    Type of path element. 
+    Letty defined as single character and followed by integer in 
+    `PathElem` string representation.
+    '''
     time =  { 'vars' : { 'z' : { 'contains': ['u','s'], 'time': ('scheduled_dt','updated_dt') }  , 
                    'u' : { 'time': ('updated_dt') }, 
                    's' : { 'time': ('scheduled_dt') } } } 
@@ -24,6 +29,7 @@ class Letty(Enum):
                  'r' : { 'artifact' : 'run' } } }
     
 def findLetty(ch):
+    ''' fine Letty by character '''
     for letty in Letty:
         if ch in letty.value['vars']:
             return letty
