@@ -54,20 +54,14 @@ def test_Path():
     eq_(path.elems[0].s, 'z')
     eq_(path.elems[0].n, 31)
     
-    try:
-        path = dpt.Path("r3")
-        eq_(True,False)
-    except ValueError:
-        pass
-    try:
-        path = dpt.Path("e17E3")
-        eq_(True,False)
-    except ValueError:
-        pass
-    try:
-        path = dpt.Path("q3")
-        eq_(True,False)
-    except ValueError:
-        pass
+    eq_(True,failing(ValueError,lambda: dpt.Path(4)))
+    eq_(True,failing(ValueError,lambda: dpt.Path('4')))
+    eq_(True,failing(ValueError,lambda: dpt.Path("r3")))
+    eq_(True,failing(ValueError,lambda: dpt.Path("e17E3")))
+    eq_(True,failing(ValueError,lambda: dpt.Path("q3")))
 
-
+    p1 = dpt.Path("z31")
+    p2 = dpt.Path("e3")
+    eq_(True,p2.isdecendant(p1))
+    eq_(False,p1.isdecendant(p2))
+    

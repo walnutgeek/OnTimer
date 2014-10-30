@@ -153,12 +153,10 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
         return self.elems
     '''
     '''
-    def isdecendant(self,other):
+    def isdecendant(self,parent):
         self._validate_time()
-        if len(self.elems) == 1 and self.elems[0].s == 'z' :
-            raise ValueError('has to be single z-elem and not: %r', self)
-        other._validate_time()
-        return self.elems[0].n >= other.elems[0].n 
+        parent._validate_time()
+        return len(parent.elems) == 1 and (parent.elems[0].s == 'z' or  parent.elems[0].s == self.elems[0].s) and self.elems[0].n <= parent.elems[0].n 
        
     def _validate_time(self):
         if self.type != Letty.time:
