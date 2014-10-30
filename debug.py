@@ -1,5 +1,5 @@
 from __future__ import print_function
-from ontimer.utils import *
+from ontimer.dpt import *
 
 '''
 from ontimer import event , utils, db

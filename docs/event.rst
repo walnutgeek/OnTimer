@@ -1,7 +1,7 @@
-.. title:: OnTimer Event 
+.. title:: Event 
 
-OnTimer Event 
-=============
+Events 
+======
 
 .. automodule:: ontimer.event
 

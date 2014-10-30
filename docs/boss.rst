@@ -1,11 +1,10 @@
-.. title:: OnTimer Event 
+.. title:: Boss app
 
-OnTimer Event 
-=============
+Boss app 
+========
 
 .. automodule:: ontimer.boss
 
-.. automethod:: ontimer.boss.main
 
   
   

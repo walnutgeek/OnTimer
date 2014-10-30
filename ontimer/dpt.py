@@ -13,9 +13,13 @@ from collections import defaultdict
 
 class Letty(Enum):
     ''' 
-    Type of path element. 
-    Letty defined as single character and followed by integer in 
-    `PathElem` string representation.
+    ``Letty`` - Type of `PathElem`.
+    
+    `PathElem` string is defined by ``quality`` (single character) followed by ``quantity`` (number). 
+    ``Letty`` help to organize PathElem in group using ``quality`` part. Letty used to to define common behavior 
+    for whole group.
+    
+    Currently defined following Letty's:  
     '''
     time =  { 'vars' : { 'z' : { 'contains': ['u','s'], 'time': ('scheduled_dt','updated_dt') }  , 
                    'u' : { 'time': ('updated_dt') }, 
@@ -28,9 +32,11 @@ class Letty(Enum):
     log =   { 'vars' : { 'l' : { 'artifact' : 'task_id' } ,
                  'r' : { 'artifact' : 'run' } } }
     
+utils.gen_doc_for_enums(Letty)
+    
 def findLetty(ch):
-    ''' fine Letty by character '''
-    for letty in Letty:
+    ''' find Letty by ``quality`` character '''
+    for letty in Letty: 
         if ch in letty.value['vars']:
             return letty
     raise ValueError( '%r does not match any letty:%r' % (ch,[ l.value['vars'].keys() for l in Letty] ) )
@@ -38,6 +44,16 @@ def findLetty(ch):
 
      
 class PathElem(utils.KeyEqMixin,utils.KeyCmpMixin):
+    '''
+    ``PathElem`` defined by ``quality`` (single character) and ``quantity`` (number).
+    
+    For Example:
+    
+    'e31' - event with ``event_id == 35``
+    
+    'z7' - all events/tasks scheduled or updated within last 7 days
+    
+    '''
     def __init__(self,s,n = None):
         if n == None:
             if isinstance( s , basestring ) and len(s) > 1 :
@@ -86,9 +102,27 @@ class PathElem(utils.KeyEqMixin,utils.KeyCmpMixin):
                 return rec_copy
         return None
 
-DEFAULT_TIME_NODE = PathElem('z31')
+#: default element. data for this 
+#: element will be retrieved from server regularly
+#: and if there is changes, data will be propagated 
+#: to all appropriate subscriptions
+ 
+DEFAULT_TIME_ELEM = PathElem('z31') 
 
 class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
+    '''
+        sequence of 1 or 2 `PathElem` elements. In string 
+        representation all elements are 
+        concatenated to each other with no delimiters.
+        
+        If path created with ``Letty.event`` type element. 
+        `DEFAULT_TIME_ELEM` will be automatically inserted as first element.
+
+        * ``elems`` - contains all `PathElem` elements
+        * ``type`` - `Letty` first element of path
+        
+        
+    '''
     def __init__(self,s):
         if not(isinstance( s , basestring )) :
             raise ValueError("s supposed to be string, but it is: %r" % s)
@@ -104,7 +138,7 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
         if len(self.elems) > 0  and self.elems[0].s == 'r':
             raise ValueError('%r cannot be first PathElem: %r' % ('r',self.elems) )
         if len(self.elems) == 0 or self.elems[0].letty == Letty.event :
-            self.elems.insert(0, DEFAULT_TIME_NODE)
+            self.elems.insert(0, DEFAULT_TIME_ELEM)
         self.type = self.elems[0].letty
         if len(self.elems) > 2 :
             raise ValueError('path can contain more then 2 elems: %r' % self.elems )
@@ -117,7 +151,8 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
             
     def __key__(self):
         return self.elems
-    
+    '''
+    '''
     def isdecendant(self,other):
         self._validate_time()
         if len(self.elems) == 1 and self.elems[0].s == 'z' :
@@ -173,7 +208,7 @@ class Publisher():
     
     def __init__(self, provider):
         self.provider = provider
-        self.time_subscriptions = utils.KeyGroupValue(lambda path: utils.Propagator(path.filter) ) 
+        self.time_subscriptions = utils.ABDict(a_value_factory = lambda path: utils.Propagator(callback,transformation=path.filter) ) 
         self.time_propagator = utils.Propagator(lambda data: utils.broadcast(self.time_subscriptions.kvals(), data))
         self.log_subscriptions = utils.KeyGroupValue()
         self.pathcast = defaultdict(dict)

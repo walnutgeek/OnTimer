@@ -11,11 +11,10 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
    event
-   utils
-   
    dpt
    boss
+   utils
    
 

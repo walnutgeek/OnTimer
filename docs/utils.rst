@@ -1,7 +1,7 @@
-.. title:: OnTimer Utils 
+.. title:: Utils 
 
-OnTimer Utils 
-=============
+Utils 
+=====
 
 .. automodule:: ontimer.utils
 

@@ -9,16 +9,23 @@ from nose.tools import eq_, with_setup
 from .. import dpt
 
 
-#to test if sniffer is not hanging uncomment next line & save
-#raise Exception()
+def failing(e,t):
+    b = False
+    try:
+        t()
+    except e:
+        b = True
+    return b
 
-
-def test_Node():
+def test_Elem():
     s31 = dpt.PathElem("s31")
     eq_(s31.s, 's')
     eq_(s31.n, 31)
     another_s31 = dpt.PathElem("s",31)
     eq_(s31, another_s31)
+    eq_(True,failing(ValueError,lambda: dpt.PathElem('a')))
+    eq_(True,failing(ValueError,lambda: dpt.PathElem('as','z')))
+    eq_(True,failing(ValueError,lambda: dpt.PathElem('as',5)))
     
 def test_Path():
     s31 = dpt.Path("s31")
