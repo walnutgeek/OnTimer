@@ -58,6 +58,8 @@ def test_Path():
     p2 = dpt.Path("e3")
     eq_(True,p2.isdecendant(p1))
     eq_(False,p1.isdecendant(p2))
+    
+    eq_(repr(p1),"'z31'")
  
 def test_filter():
     as_of = utils.toDateTime('2014-10-30 23:59:00')
@@ -108,4 +110,9 @@ def test_filter():
     z1T5_data = z1T5.filter(events, as_of)
     eq_(len(z1T5_data),1)
     eq_(len(z1T5_data[0]['tasks']),1)
-    
+    z1T15 = dpt.Path('z1T15')
+    z1T15_data = z1T15.filter(events, as_of)
+    eq_(len(z1T15_data),0)
+    z1g2 = dpt.Path('z1g2').filter(events, as_of)
+    eq_(len(z1g2),1)
+    eq_(len(z1g2[0]['tasks']),6)

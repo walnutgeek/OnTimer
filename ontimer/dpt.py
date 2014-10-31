@@ -144,7 +144,7 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
             raise ValueError('path can contain more then 2 elems: %r' % self.elems )
             
     def __str__(self):
-        return "".join(self.elems)
+        return "".join(str(e) for e in self.elems)
  
     def __repr__(self):
         return repr(str(self))
