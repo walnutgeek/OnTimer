@@ -17,6 +17,8 @@ from collections import defaultdict, MutableMapping
 from sets import Set
 
 
+#: date format YYYY-MM-DD hh:mm:ss.nano 
+format_Y_m_d_H_M_S_n = '%Y-%m-%d %H:%M:%S.%f'
 #: date format YYYY-MM-DD hh:mm:ss 
 format_Y_m_d_H_M_S = '%Y-%m-%d %H:%M:%S'
 #: date format YYYYMMDD-hhmmss 
@@ -29,7 +31,8 @@ format_Y_m_d       = '%Y-%m-%d'
 format_Ymd         = '%Y%m%d'
 
 #: all date formats above
-all_formats = [format_Y_m_d_H_M_S,
+all_formats = [format_Y_m_d_H_M_S_n,
+               format_Y_m_d_H_M_S,
                format_Ymd_HMS,
                format_YmdHMS,
                format_Y_m_d,
@@ -63,7 +66,7 @@ def toDateTime(s,formats=all_formats):
             pass
     raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
 
-def utc_adjusted(**kwargs):
+def utc_adjusted(now = None, **kwargs):
     ''' return utc adjusted. Adjustments should follow conventions 
         of  `datetime.timedelta` .
     
@@ -77,7 +80,8 @@ def utc_adjusted(**kwargs):
         >>>
     
     '''
-    return (datetime.datetime.utcnow()+datetime.timedelta(**kwargs))
+    now = now or datetime.datetime.utcnow()
+    return (now+datetime.timedelta(**kwargs))
 
 def quict(**kwargs): 
     ''' 
@@ -528,6 +532,6 @@ def gen_doc_for_enums(*args):
     all of them will be have ``__doc__`` appended with list of enum constants.
     '''
     for enum in args:
-        enum.__doc__ = ( enum.__doc__ if enum.__doc__ else '' ) +  ' , '.join('``%s``' % e.name for e in enum)
+        enum.__doc__ = ( enum.__doc__ if enum.__doc__ else '' ) +  ' , '.join(sorted('``%s``' % e.name for e in enum))
 
 

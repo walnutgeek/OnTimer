@@ -8,6 +8,7 @@ Utils
   Date utils
   ----------
   
+  .. autodata:: format_Y_m_d_H_M_S_n
   .. autodata:: format_Y_m_d_H_M_S
   .. autodata:: format_Ymd_HMS
   .. autodata:: format_YmdHMS

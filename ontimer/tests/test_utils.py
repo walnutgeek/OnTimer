@@ -174,9 +174,9 @@ def test_enums():
                     lambda dt: dt.strftime(utils.format_Y_m_d_H_M_S))
     utils.gen_doc_for_enums(VarTypes,GeneratorStatus)
     
-    eq_(GeneratorStatus.__doc__,'Choices are:``unset`` , ``running`` , ``paused`` , ``ontime``')
+    eq_(GeneratorStatus.__doc__,'Choices are:``ontime`` , ``paused`` , ``running`` , ``unset``')
     
-    eq_(VarTypes.__doc__,'``INT`` , ``STR`` , ``FLOAT`` , ``DATETIME``' )
+    eq_(VarTypes.__doc__,'``DATETIME`` , ``FLOAT`` , ``INT`` , ``STR``' )
     
     def expectValueError(e, *args):
         i=0

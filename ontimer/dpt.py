@@ -80,10 +80,10 @@ class PathElem(utils.KeyEqMixin,utils.KeyCmpMixin):
         return (self.s,self.n)
     
     def config(self):
-        return self.letty.value[self.s]
+        return self.letty.value['vars'][self.s]
 
-    def timematch(self, rec):
-        time = utils.utc_adjusted(days=-self.n)
+    def timematch(self, rec, now = None):
+        time = utils.utc_adjusted(now=now,days=-self.n) 
         for field_name in self.config()['time']:
             if time <= utils.toDateTime(rec[field_name]):
                 return True
@@ -95,7 +95,7 @@ class PathElem(utils.KeyEqMixin,utils.KeyCmpMixin):
             if rec[config['event']] == self.n:
                 return rec
         elif 'task' in config  :  
-            tasks = [ t for t in rec['tasks'] if t[config['task'] == self.n ]]
+            tasks = [ t for t in rec['tasks'] if t[config['task']] == self.n ]
             if len(tasks):
                 rec_copy = rec.copy()
                 rec_copy['tasks'] = tasks
@@ -162,11 +162,11 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
         if self.type != Letty.time:
             raise ValueError("filter only can be applied to time type")
 
-    def filter(self, event_data ):
+    def filter(self, event_data , now=None):
         self._validate_time()
         filtered = []
         for rec in event_data:
-            if self.elems[0].timematch(rec) :
+            if self.elems[0].timematch(rec, now) :
                 if len(self.elems) == 1 :
                     filtered.append(rec)
                 else:
