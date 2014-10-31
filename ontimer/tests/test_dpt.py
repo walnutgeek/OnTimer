@@ -116,3 +116,7 @@ def test_filter():
     z1g2 = dpt.Path('z1g2').filter(events, as_of)
     eq_(len(z1g2),1)
     eq_(len(z1g2[0]['tasks']),6)
+    failing(ValueError,lambda: dpt.Path('l15r3').filter(events, as_of))
+    failing(ValueError,lambda: dpt.Path('l15r3').isdecendant(z1T15))
+    failing(ValueError,lambda: z1T15.isdecendant(dpt.Path('l15r3')))
+    
