@@ -138,7 +138,6 @@ def test_PublishSubscribe():
     c1 = Client()
  
     c2 = Client()
-#         
-#     p = dpt.Publisher()
-    
+    p = dpt.Publisher()
+    #eq_(str(p.subscriptions.a), "")
     

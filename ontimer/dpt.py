@@ -126,22 +126,23 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
     def __init__(self,s):
         if not(isinstance( s , basestring )) :
             raise ValueError("s supposed to be string, but it is: %r" % s)
-        self.elems = []
+        elems = []
         while len(s) > 0:
             if s[0].isdigit():
                 raise ValueError("s supposed to be not digit char: %s" % s)
             i = 1
             while i < len(s) and s[i].isdigit() : 
                 i = i + 1
-            self.elems.append(PathElem(s[0],int(s[1:i])))
+            elems.append(PathElem(s[0],int(s[1:i])))
             s = s[i:]
-        if len(self.elems) > 0  and self.elems[0].s == 'r':
-            raise ValueError('%r cannot be first PathElem: %r' % ('r',self.elems) )
-        if len(self.elems) == 0 or self.elems[0].letty == Letty.event :
-            self.elems.insert(0, DEFAULT_TIME_ELEM)
-        self.type = self.elems[0].letty
+        if len(elems) > 0  and elems[0].s == 'r':
+            raise ValueError('%r cannot be first PathElem: %r' % ('r',elems) )
+        if len(elems) == 0 or elems[0].letty == Letty.event :
+            elems.insert(0, DEFAULT_TIME_ELEM)
+        self.type = elems[0].letty
+        self.elems = tuple(elems)
         if len(self.elems) > 2 :
-            raise ValueError('path can contain more then 2 elems: %r' % self.elems )
+            raise ValueError('path can contain more then 2 elems: %r' % (self.elems,) )
             
     def __str__(self):
         return "".join(str(e) for e in self.elems)
@@ -204,7 +205,7 @@ class Publisher():
                 return self.path == DEFAULT_PATH
             
         self.subscriptions = utils.ABDict(a_value_factory=PathValue)
-        self.subscriptions[DEFAULT_PATH][None]=None
+        self.subscriptions.ab[DEFAULT_PATH]['']=''
         
     
     def update_time_data(self, z31_data):
