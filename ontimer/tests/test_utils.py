@@ -133,6 +133,14 @@ def test_propagator():
     p.update(7)
     eq_(7,arr[-1])
     eq_(3,len(arr))
+    arr2=[]
+    p.add_callback(lambda x: arr2.append(x))
+    eq_(7,arr2[-1])
+    eq_(1,len(arr2))
+    p2=utils.Propagator(broadcast=utils.Broadcast(lambda:[]))
+    expectError(ValueError, lambda: p2.add_callback(lambda x: None))
+    expectError(ValueError, lambda: utils.Propagator(callback=lambda:None, broadcast=utils.Broadcast(lambda:[])) )
+
 
 def test_broadcast():
     acc = ['','','','']
@@ -151,6 +159,45 @@ def test_broadcast():
     utils.broadcast([append2]," sto")
     utils.broadcast([append1,append2]," let")
     utils.broadcast([append0,append1,append2,append3],"!")
+    eq_(str(acc),"['Hello John!', 'Hello let!', 'Privet sto let!', 'Privet John!']" )
+    
+def test_Broadcast():
+    acc = ['','','','']
+    def append0(s):
+        acc[0] += s
+    def append1(s):
+        acc[1] += s
+    def append2(s):
+        acc[2] += s
+    def append3(s):
+        acc[3] += s
+    def generator1():
+        yield append0
+        yield append1
+    def generator2():
+        yield append2
+        yield append3
+    def generator3():
+        yield append0
+        yield append3
+    def generator4():
+        return [append2]
+    def generator5():
+        yield append1
+        yield append2
+    def generator6():
+        yield append0
+        yield append1
+        yield append2
+        yield append3
+    
+    utils.Broadcast(generator1).call_all("Hello")
+    utils.Broadcast(generator2).call_all("Privet")
+    eq_(str(acc),"['Hello', 'Hello', 'Privet', 'Privet']")
+    utils.Broadcast(generator3).call_all(" John")
+    utils.Broadcast(generator4).call_all(" sto")
+    utils.Broadcast(generator5).call_all(" let")
+    utils.Broadcast(generator6).call_all("!")
     eq_(str(acc),"['Hello John!', 'Hello let!', 'Privet sto let!', 'Privet John!']" )
 
 from enum import IntEnum,Enum

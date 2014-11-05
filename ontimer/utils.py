@@ -143,28 +143,54 @@ def broadcast(it, *args, **kwargs):
     for callback  in it:
         callback(*args,**kwargs)
 
-class Broadcast(list):
+class Broadcast:
+    '''
+    constructor takes ``f`` function as argument, that supposed to return iterator of functions.
+    Every time when  when ``call_all(...)`` executed, ``f()`` get called to obtain 
+    iterator and all functions from this iterator get called with argument provided to 
+    ``call_all``.
+    
+    >>> def f():
+    ...   yield lambda x: print( " l1 %s " % x )
+    ...   yield lambda x: print( " l2 %s " % x )
+    ... 
+    >>> b = Broadcast(f)
+    >>> b.call_all('hello')
+     l1 hello 
+     l2 hello 
+    >>> 
+        
+    '''
+    def __init__(self, f):
+        self.f = f
+
+    def call_all(self, *args, **kwargs):
+        '''
+        call all functions with arguments provided: ``(*args,**kwargs)``
+        '''
+        broadcast(self.f(), *args,**kwargs)
+
+class BroadcastList(list,Broadcast):
     '''
     list of functions to be able to call all these functions at once:
     
-    >>> bcast = Broadcast() 
+    >>> bcast = BroadcastList() 
     >>> bcast.append( lambda x: print( " l1 %s " % x ) )
     >>> bcast.append( lambda x: print( " l2 %s " % x ) )
     >>> bcast.call_all('hello')
      l1 hello 
      l2 hello 
     >>> 
-        
+    
+    Class inherit all it's methods from `list`, `Broadcast`
+    
     '''
     def __init__(self, callback=None):
+        list.__init__(self)
+        Broadcast.__init__(self, lambda: self)
         if callback is not None:
             self.append(callback)
 
-    def call_all(self, *args, **kwargs):
-        '''
-        call all functions with arguments provided: ``(*args,**kwargs)``
-        '''
-        broadcast(self, *args,**kwargs)
 
 class ProtectedDict(MutableMapping):
     '''
@@ -288,9 +314,9 @@ class NiceDict(MutableMapping):
         self.dictId = dictId
         self.store = dict()
         self.defvalue=defvalue
-        self.onset_bcast = Broadcast(onset)
-        self.ondelete_bcast = Broadcast(ondelete)
-        self.onempty_bcast = Broadcast(onempty)
+        self.onset_bcast = BroadcastList(onset)
+        self.ondelete_bcast = BroadcastList(ondelete)
+        self.onempty_bcast = BroadcastList(onempty)
         
     def __getitem__(self, key):
         k = self.__keytransform__(key)
@@ -337,33 +363,69 @@ class Propagator:
     data update will propagate to callback, 
     only if data actually changed:
     
-    >>> p=Propagator(lambda x: print(x))
+    
+    >>> p=Propagator(lambda x: print("x=",x))
+    >>> p.update(3)
+    x= 3
+    True
+    >>> p.data , p.last_ts
+    (3, datetime.datetime(2014, 11, 4, 16, 14, 40, 822682))
+    >>> p.add_callback(lambda y:print("y=",y))
+    y= 3
+    >>> p.update(3)
+    False
     >>> p.update(5)
-    5
-    >>> p.update(5)
+    x= 5
+    y= 5
+    True
+    >>> p.data , p.last_ts
+    (5, datetime.datetime(2014, 11, 4, 16, 18, 50, 74680))
+    >>> p.broadcast
+    [<function <lambda> at 0x10062e758>, <function <lambda> at 0x10062e6e0>]
+    >>> del p.broadcast[1]
     >>> p.update(6)
-    6
-    >>> p.update(6)
-    >>> p.update(7)
-    7
-    >>> p.update(7)
+    x= 6
+    True
     >>> 
+
+
     
     '''
-    def __init__(self, callback, transformation=pass_thru_transformation): 
-        self.callback = callback
+    def __init__(self, callback=None, broadcast=None, transformation=pass_thru_transformation): 
+        if callback and broadcast:
+            raise ValueError('callback and broadcast cannot be defined together')
+        self.broadcast = BroadcastList() if broadcast is None else broadcast  #: list to store all callback methods
+        if callback is not None:
+            self.broadcast.append(callback)
         self.transformation = transformation
-        self.data = None
+        self.data = None #: data stored after last successful updates
+        self.last_ts = None #: time of last successful update
         
+
     def update(self,data):
-        '''   push new ``data`` to propagate '''
+        '''   
+        push new ``data`` to propagate to ``callbacks``
+        
+        returns ``True`` if ``data`` was propagated  
+        '''
         transform = self.transformation(data)
         if self.data != transform:
+            self.last_ts = datetime.datetime.utcnow()
             self.data = transform
-            self.callback(transform)
+            self.broadcast.call_all(transform)
+            return True
+        return False
+    
+    def update_latest_data(self,callback):
+        if self.last_ts:
+            callback(self.data)
 
-
-
+    def add_callback(self,callback):
+        if isinstance(self.broadcast, BroadcastList):
+            self.broadcast.append(callback)
+            self.update_latest_data(callback)
+        else:
+            raise ValueError("don't know how to append to that broadcast")
 
 class ABDict:
     ''' 
@@ -373,7 +435,7 @@ class ABDict:
     It allow to store ``ab_value`` for each unique combination 
     ``akey`` and ``bkey``. Additionaly you may want store : ``a_value`` one for each ``akey``, or 
     ``b_value`` one for each bkey. 
-    All these values could be created on automatically if appropriate default factory 
+    All these values could be created automatically if appropriate default factory 
     defined on instance creation. 
     
     
@@ -528,7 +590,7 @@ def find_enum(enum,v):
     raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
 
 def gen_doc_for_enums(*args):
-    '''Method generate docs strings for enums. Pass any namber of enum classes, 
+    '''Method generate docs strings for enums. Pass any number of enum classes, 
     all of them will be have ``__doc__`` appended with list of enum constants.
     '''
     for enum in args:

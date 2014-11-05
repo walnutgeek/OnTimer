@@ -10,6 +10,7 @@ Data Propagation Tree
   :members:
 
 .. autodata:: DEFAULT_TIME_ELEM
+.. autodata:: DEFAULT_PATH
    
 .. autoclass:: PathElem
   :members:

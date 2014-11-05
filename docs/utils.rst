@@ -27,7 +27,12 @@ Utils
  
   .. autoclass:: Broadcast
      :members:
+     
+  .. autoclass:: BroadcastList
+     :members:
+     :inherited-members: 
   
+    
   .. autoclass:: ProtectedDict
      :members:
 
@@ -38,12 +43,10 @@ Utils
      :members:
  
   .. automethod:: ontimer.utils.pass_thru_transformation
-  .. autoclass:: Propagator(callback, transformation=pass_thru_transformation)
+
+  .. autoclass:: Propagator (callback=None, broadcast=BroadcastList(), transformation=pass_thru_transformation)
      :members:
  
- 
- 
-  
   Enums
   -----
   

@@ -49,7 +49,7 @@ class PathElem(utils.KeyEqMixin,utils.KeyCmpMixin):
     
     For Example:
     
-    'e31' - event with ``event_id == 35``
+    'e31' - event with ``event_id == 31``
     
     'z7' - all events/tasks scheduled or updated within last 7 days
     
@@ -151,13 +151,19 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
             
     def __key__(self):
         return self.elems
-    '''
-    '''
+ 
+       
     def isdecendant(self,parent):
         self._validate_time()
         parent._validate_time()
         return len(parent.elems) == 1 and (parent.elems[0].s == 'z' or  parent.elems[0].s == self.elems[0].s) and self.elems[0].n <= parent.elems[0].n 
-       
+    
+    def get_root(self):
+        if self.type == Letty.time and self.isdecendant(DEFAULT_PATH) :
+            return DEFAULT_PATH
+        return None
+        
+           
     def _validate_time(self):
         if self.type != Letty.time:
             raise ValueError("filter only can be applied to time type")
@@ -175,26 +181,9 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
                         filtered.append(match)
         return filtered
 
+#: default path
 DEFAULT_PATH = Path('')
 
- 
-
-class Subscriber:
-    def __init__(self, publisher, client ):    
-        self.publisher = publisher
-        self.client = client
-        self.topics = None
-        
-    def updateClient(self, data):
-        self.client.write_message(json.dumps(data))
-        
-    def updateTopics(self, topics):
-        if self.topics != topics :
-            self.topics = topics
-            self.publisher.subscribe(self)
-
-
-    
 class Publisher():
     '''
     publisher receives all topics that client interested to consume. It detect 
@@ -204,15 +193,24 @@ class Publisher():
     
     '''
     
-    def __init__(self, provider):
-        self.provider = provider
-        self.time_subscriptions = utils.ABDict(a_value_factory = lambda path: utils.Propagator(callback,transformation=path.filter) ) 
-        self.time_propagator = utils.Propagator(lambda data: utils.broadcast(self.time_subscriptions.kvals(), data))
-        self.log_subscriptions = utils.KeyGroupValue()
-        self.pathcast = defaultdict(dict)
-        self.propagator = utils.Propagator(self.broadcast.update)
+    def __init__(self):
+        publisher = self
+        class PathValue:
+            def __init__(self,path):
+                self.publisher = publisher
+                self.path=path
+                
+            def has_subscriptions(self):
+                return self.path == DEFAULT_PATH
+            
+        self.subscriptions = utils.ABDict(a_value_factory=PathValue)
+        self.subscriptions[DEFAULT_PATH][None]=None
+        
     
-    def check_provider(self):
+    def update_time_data(self, z31_data):
+        self.time_propagator.update(self.provider(DEFAULT_PATH))
+
+    def update_time_data(self, z31_data):
         self.time_propagator.update(self.provider(DEFAULT_PATH))
     
     def subscribe(self, subscriber):
