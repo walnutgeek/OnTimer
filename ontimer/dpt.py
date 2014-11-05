@@ -164,6 +164,8 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
             return DEFAULT_PATH
         return None
         
+    def isroot(self):
+        return self == DEFAULT_PATH or self.get_root() is None
            
     def _validate_time(self):
         if self.type != Letty.time:
@@ -205,23 +207,10 @@ class Publisher():
                 return self.path == DEFAULT_PATH
             
         self.subscriptions = utils.ABDict(a_value_factory=PathValue)
-        self.subscriptions.ab[DEFAULT_PATH]['']=''
-        
+        self.subscriptions.ab[DEFAULT_PATH][None]=None
     
-    def update_time_data(self, z31_data):
-        self.time_propagator.update(self.provider(DEFAULT_PATH))
-
-    def update_time_data(self, z31_data):
-        self.time_propagator.update(self.provider(DEFAULT_PATH))
+    def root_path_iter(self):
+        return ( p for p in self.subscriptions.ab if p.isroot() )
     
-    def subscribe(self, subscriber):
-        for topic in subscriber.topics:
-            if DEFAULT_PATH.isdecendant(topic):
-                propagator = Propagator(subscriber.updateClient,topic.filter)
-                self.broadcast.add_observer(propagator.update,subscriber.client)  
-            else:
-                if self.provider.islive(topic):
-                    self.pathcast[topic]
-                subscriber.updateClient(self.provider.getdata(topic))
     
 

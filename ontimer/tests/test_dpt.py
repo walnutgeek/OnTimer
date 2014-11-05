@@ -139,5 +139,6 @@ def test_PublishSubscribe():
  
     c2 = Client()
     p = dpt.Publisher()
+    eq_(str(list(p.root_path_iter())), "['z31']")
     #eq_(str(p.subscriptions.a), "")
     
