@@ -1,3 +1,11 @@
+"""
+This module contains of data access logic.
+
+Examples on this page assumes that you imported ``ontimer.db`` like::
+
+    import ontimer.db as db
+    
+"""
 import hashlib
 import datetime
 import sqlite3

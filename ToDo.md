@@ -24,12 +24,15 @@ ToDo
   * documentation 
   	* document and test on ontimer.utils module
   	* learn sphinx
-   
-##Now
   * data propagation tree subscribers and filters 
   	* design
   	* implementaion
     * implement subscriptions tracker object on server side with data propagation tree.
+   
+##Now
+  * data propagation tree subscribers and filters 
+  	* test
+  * rework page design with bootstrap 
   * event summary
   * task summary
   * implement log subscription

@@ -1,3 +1,11 @@
+'''
+OnTimer app 
++++++++++++
+
+run scheduler daemon and simple web interface
+  
+
+'''
 from __future__ import print_function
 
 import argparse

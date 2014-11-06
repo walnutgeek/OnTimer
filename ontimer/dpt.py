@@ -9,6 +9,7 @@ from enum import Enum
 from . import utils
 import json
 from collections import defaultdict
+import itertools
 
 
 class Letty(Enum):
@@ -160,12 +161,13 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
         return len(parent.elems) == 1 and (parent.elems[0].s == 'z' or  parent.elems[0].s == self.elems[0].s) and self.elems[0].n <= parent.elems[0].n 
     
     def get_root(self):
-        if self.type == Letty.time and self.isdecendant(DEFAULT_PATH) :
+        if self.type == Letty.time and self != DEFAULT_PATH and self.isdecendant(DEFAULT_PATH) :
             return DEFAULT_PATH
         return None
         
     def isroot(self):
-        return self == DEFAULT_PATH or self.get_root() is None
+        ''' if path  is root of data tree and have to be data has to be requested from `ontimer.db.Dao` '''
+        return self.get_root() is None
            
     def _validate_time(self):
         if self.type != Letty.time:
@@ -194,7 +196,6 @@ class Publisher():
     if these tokens supposed to be subscription or one-of request and routes it 
     to appropriate channel: 
     if request is about tasks an within z31(DEFAULT_PATH), it is added to broadcast
-    
     '''
     
     def __init__(self):
@@ -205,11 +206,17 @@ class Publisher():
                 self.path=path
                 if self.path.isroot():
                     self.cache = utils.Propagator( broadcast=utils.Broadcast(
-                        lambda: pv.cache.update for pv in self.publisher.subscriptions.a.itervalues() ) )
+                        lambda: itertools.chain(self.all_propagator_updates(),self.all_write_meesages()) ) )
                 else:
-                    self.cache = utils.Propagator( broadcast=utils.Broadcast(
-                        lambda: c.write_message for c in self.publisher.subscriptions.ab[path] ), 
-                                                  transformation=path.filter )
+                    self.cache = utils.Propagator( broadcast=utils.Broadcast( self.all_write_meesages), 
+                                                   transformation=self.path.filter )
+
+            def all_write_meesages(self):
+                return ( c.write_message for c in self.publisher.subscriptions.ab[self.path] )
+                                                   
+            def all_propagator_updates(self):
+                return ( pv.cache.update for pv in self.publisher.subscriptions.a.itervalues() 
+                        if pv.path.isdecendant(self.path) )
                 
             def has_subscriptions(self):
                 return self.path == DEFAULT_PATH
@@ -218,7 +225,10 @@ class Publisher():
         self.subscriptions.ab[DEFAULT_PATH][None]=None
     
     def root_path_iter(self):
-        ''' all root path in publisher '''
+        ''' 
+        all root paths in publisher. Data  for these path will 
+        be regularly requested from `ontimer.db.Dao` 
+        '''
         return ( p for p in self.subscriptions.ab if p.isroot() )
     
     def add_client(self,c):

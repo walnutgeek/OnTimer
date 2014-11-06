@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 '''
-Boss 
-====
+Boss app
+++++++++
 
 app printing random stuff and randomly freaks out.
-
-Disclaimer: this application has noting to do with my previous or current bosses. All 
-similarities are coincidental.
-  
 
 Application purpose is to test ontimer scheduler 
 and exhibit random behavior.
@@ -16,6 +12,10 @@ Credit due to Corporate BS generator: http://www.atrixnet.com/bs-generator.html
 I took arrays of adverbs, verbs, adjectives, nouns from there. I could not find 
 any copyright or terms of use on page. I guess it is ok, but if it is not, please  
 don't sue me just let me know. 
+
+Disclaimer: this application has noting to do with my previous or current bosses. All 
+similarities are coincidental.
+  
 
 '''
 from __future__ import print_function
