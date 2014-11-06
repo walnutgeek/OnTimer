@@ -17,4 +17,7 @@ Data Propagation Tree
   
 .. autoclass:: Letty
   :members:
+  
+.. autoclass:: Publisher
+  :members:
 

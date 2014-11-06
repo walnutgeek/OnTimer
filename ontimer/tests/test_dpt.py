@@ -137,8 +137,14 @@ def test_PublishSubscribe():
      
     c1 = Client()
  
-    c2 = Client()
     p = dpt.Publisher()
+    c1.on_message((dpt.Path('z1T5'),))
+    p.add_client(c1)
     eq_(str(list(p.root_path_iter())), "['z31']")
+    eq_(str(list(p.subscriptions.a.keys())), "['z31', 'z1T5']")
+    c1.on_message((dpt.Path('z1T6'),))
+    eq_(str(list(p.subscriptions.a.keys())), "['z1T6', 'z31']")
+    eq_(str(list(p.root_path_iter())), "['z31']")
+    
     #eq_(str(p.subscriptions.a), "")
     

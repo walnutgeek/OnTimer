@@ -172,6 +172,7 @@ class Path(utils.KeyEqMixin,utils.KeyCmpMixin):
             raise ValueError("filter only can be applied to time type")
 
     def filter(self, event_data , now=None):
+        now = utils.utc_adjusted(now)
         self._validate_time()
         filtered = []
         for rec in event_data:
@@ -202,6 +203,13 @@ class Publisher():
             def __init__(self,path):
                 self.publisher = publisher
                 self.path=path
+                if self.path.isroot():
+                    self.cache = utils.Propagator( broadcast=utils.Broadcast(
+                        lambda: pv.cache.update for pv in self.publisher.subscriptions.a.itervalues() ) )
+                else:
+                    self.cache = utils.Propagator( broadcast=utils.Broadcast(
+                        lambda: c.write_message for c in self.publisher.subscriptions.ab[path] ), 
+                                                  transformation=path.filter )
                 
             def has_subscriptions(self):
                 return self.path == DEFAULT_PATH
@@ -210,7 +218,19 @@ class Publisher():
         self.subscriptions.ab[DEFAULT_PATH][None]=None
     
     def root_path_iter(self):
+        ''' all root path in publisher '''
         return ( p for p in self.subscriptions.ab if p.isroot() )
+    
+    def add_client(self,c):
+        ''' '''
+        def process_paths(paths):
+            for p in paths:
+                self.subscriptions.ab[p][c]=None
+            todelete = [p for p in self.subscriptions.akeys[c] if p not in paths]
+            for p in todelete:
+                del self.subscriptions.ab[p][c]
+                
+        c.topics_propagator.add_callback(process_paths)
     
     
 
