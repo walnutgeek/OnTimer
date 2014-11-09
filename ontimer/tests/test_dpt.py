@@ -120,7 +120,7 @@ def test_filter():
     failing(ValueError,lambda: dpt.Path('l15r3').isdecendant(z1T15))
     failing(ValueError,lambda: z1T15.isdecendant(dpt.Path('l15r3')))
     
-def test_PublishSubscribe():
+def test_Publisher():
     
     
     class Client():
@@ -140,11 +140,14 @@ def test_PublishSubscribe():
     p = dpt.Publisher()
     c1.on_message((dpt.Path('z1T5'),))
     p.add_client(c1)
+
     eq_(str(list(p.root_path_iter())), "['z31']")
     eq_(str(list(p.subscriptions.a.keys())), "['z31', 'z1T5']")
     c1.on_message((dpt.Path('z1T6'),))
     eq_(str(list(p.subscriptions.a.keys())), "['z1T6', 'z31']")
     eq_(str(list(p.root_path_iter())), "['z31']")
-    
+    r=next(p.root_path_iter())
+    p.publish(r,events)
+    eq_(len(c1.written),1)
     #eq_(str(p.subscriptions.a), "")
     

@@ -57,14 +57,14 @@ def toDateTime(s,formats=all_formats):
     
     
     '''
-    if isinstance(s,datetime.datetime):
+    if s is None or isinstance(s,datetime.datetime):
         return s
     for f in formats:
         try:
             return datetime.datetime.strptime(s, f)
         except:
             pass
-    raise ValueError('Cannot parse "%s", tried %s',s,str(formats))
+    raise ValueError('Cannot parse "%r", tried %r' % (s,formats))
 
 def utc_adjusted(now = None, **kwargs):
     ''' return utc adjusted. Adjustments should follow conventions 

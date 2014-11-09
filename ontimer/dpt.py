@@ -86,7 +86,8 @@ class PathElem(utils.KeyEqMixin,utils.KeyCmpMixin):
     def timematch(self, rec, now = None):
         time = utils.utc_adjusted(now=now,days=-self.n) 
         for field_name in self.config()['time']:
-            if time <= utils.toDateTime(rec[field_name]):
+            extracted = utils.toDateTime(rec[field_name])
+            if extracted is not None and time <= extracted:
                 return True
         return False
     
@@ -206,21 +207,18 @@ class Publisher():
                 self.path=path
                 if self.path.isroot():
                     self.cache = utils.Propagator( broadcast=utils.Broadcast(
-                        lambda: itertools.chain(self.all_propagator_updates(),self.all_write_meesages()) ) )
+                        lambda: itertools.chain(self.all_propagator_updates(),self.all_write_messages()) ) )
                 else:
-                    self.cache = utils.Propagator( broadcast=utils.Broadcast( self.all_write_meesages), 
+                    self.cache = utils.Propagator( broadcast=utils.Broadcast( self.all_write_messages), 
                                                    transformation=self.path.filter )
 
-            def all_write_meesages(self):
-                return ( c.write_message for c in self.publisher.subscriptions.ab[self.path] )
+            def all_write_messages(self):
+                return ( c.write_message for c in self.publisher.subscriptions.ab[self.path] if c is not None )
                                                    
             def all_propagator_updates(self):
                 return ( pv.cache.update for pv in self.publisher.subscriptions.a.itervalues() 
                         if pv.path.isdecendant(self.path) )
                 
-            def has_subscriptions(self):
-                return self.path == DEFAULT_PATH
-            
         self.subscriptions = utils.ABDict(a_value_factory=PathValue)
         self.subscriptions.ab[DEFAULT_PATH][None]=None
     
@@ -241,6 +239,9 @@ class Publisher():
                 del self.subscriptions.ab[p][c]
                 
         c.topics_propagator.add_callback(process_paths)
+        
+    def publish(self, path, data):
+        self.subscriptions.a[path].cache.update(data)
     
     
 

@@ -29,7 +29,6 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
-.coverage
 .cache
 nosetests.xml
 coverage.xml
@@ -55,7 +54,7 @@ docs/_build/
 /.settings
 /.README.md.html
 /.MinimalViableProduct.md.html
-/test-out
 /.OnExp.md.html
-/root
 /.ToDo.md.html
+/test-out
+/root

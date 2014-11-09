@@ -2,7 +2,7 @@
 OnTimer app 
 +++++++++++
 
-run scheduler daemon and simple web interface
+run scheduler daemon and web interface
   
 
 '''
