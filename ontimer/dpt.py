@@ -199,7 +199,7 @@ class Publisher():
     if request is about tasks an within z31(DEFAULT_PATH), it is added to broadcast
     '''
     
-    def __init__(self):
+    def __init__(self,now_factory = None):
         publisher = self
         class PathValue:
             def __init__(self,path):
@@ -210,7 +210,11 @@ class Publisher():
                         lambda: itertools.chain(self.all_propagator_updates(),self.all_write_messages()) ) )
                 else:
                     self.cache = utils.Propagator( broadcast=utils.Broadcast( self.all_write_messages), 
-                                                   transformation=self.path.filter )
+                        transformation=lambda d: self.path.filter(d, now=self.publisher.now_factory()) )
+                    root = self.path.get_root()
+                    if root in self.publisher.subscriptions.a:
+                        self.publisher.subscriptions.a[root].cache.update_latest_data(self.cache.update)
+                        
 
             def all_write_messages(self):
                 return ( c.write_message for c in self.publisher.subscriptions.ab[self.path] if c is not None )
@@ -221,6 +225,7 @@ class Publisher():
                 
         self.subscriptions = utils.ABDict(a_value_factory=PathValue)
         self.subscriptions.ab[DEFAULT_PATH][None]=None
+        self.now_factory = now_factory or (lambda: utils.utc_adjusted())
     
     def root_path_iter(self):
         ''' 
@@ -233,7 +238,9 @@ class Publisher():
         ''' '''
         def process_paths(paths):
             for p in paths:
-                self.subscriptions.ab[p][c]=None
+                if p is not self.subscriptions.ab or c not in self.subscriptions.ab[p]:
+                    self.subscriptions.ab[p][c]=None
+                    self.subscriptions.a[p].cache.update_latest_data(c.write_message)
             todelete = [p for p in self.subscriptions.akeys[c] if p not in paths]
             for p in todelete:
                 del self.subscriptions.ab[p][c]

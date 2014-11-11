@@ -28,10 +28,10 @@ ToDo
   	* design
   	* implementaion
     * implement subscriptions tracker object on server side with data propagation tree.
+    * now freeze date
+  	* test
    
 ##Now
-  * data propagation tree subscribers and filters 
-  	* test
   * rework page design with bootstrap 
   * event summary
   * task summary
@@ -43,6 +43,8 @@ ToDo
     * structure skeleton
     * templates for all modules
     * home page and quick start 
+	* convert docs MD into rst
+	  * pandoc ?
    
 ##Later 
   * Consider better name KeyGroupValue
