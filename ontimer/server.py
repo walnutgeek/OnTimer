@@ -15,12 +15,13 @@ import fcntl
 import sys
 
 from . import event
-from .db import Dao
+from .db import Dao, ServerStatus
 from . import utils
 import shlex, subprocess
 
 import logging
 log = logging.getLogger(__name__)
+
 
 _IN_STREAM = 0
 _OUT_FILE = 1
@@ -71,7 +72,7 @@ class Run:
         if self.state.dao.update_task(self.task):
             self.task = state.dao.load_task(self.task)
         else:
-            raise ValueError('task already processed by somewhere else %r' % self.task)
+            raise ValueError('task already processed somewhere else %r' % self.task)
 
     def storeArtifacts(self, **kwargs):
         for k in kwargs:
@@ -126,9 +127,21 @@ class State:
         event.global_config.update(self.dao.get_global_vars())
     
     def check(self):
-        for task in self.dao.get_tasks_to_run():
-            self.runs.append(Run(self,task))
+        server_props = self.dao.get_server_properties()
+        prepare_to_stop = utils.find_enum(ServerStatus, server_props['server_status']) == ServerStatus.prepare_to_stop
+
+        if not(prepare_to_stop):
+            for task in self.dao.get_tasks_to_run():
+                self.runs.append(Run(self,task))
         self.runs = [run for run in self.runs if run.isRunning()]
+        if prepare_to_stop and len(self.runs)==0:
+            server_props.update(_server_status = ServerStatus.shutdown )
+            self.dao.set_server_properties(server_props)
+            self.main_loop.stop()
+            self.scheduler.stop()
+            
+            return
+            
         #retry failed tasks
         for task in self.dao.get_tasks_of_status(event.TaskStatus.fail):
             next_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=5 * task['run_count'])
@@ -235,8 +248,11 @@ def run_server(_dao):
         raise SystemExit(-1)
     #milliseconds
     interval_ms = 5 * 1000
-    main_loop = ioloop.IOLoop.instance()
-    scheduler = ioloop.PeriodicCallback(lambda: state.check() , interval_ms, io_loop = main_loop)
-    #start your period timer
-    scheduler.start()
-    main_loop.start()
+    server_props = _dao.get_server_properties()
+    server_props.update(_server_status = ServerStatus.running )
+    _dao.set_server_properties(server_props)
+    
+    state.main_loop = ioloop.IOLoop.instance()
+    state.scheduler = ioloop.PeriodicCallback(state.check , interval_ms, io_loop = state.main_loop)
+    state.scheduler.start()
+    state.main_loop.start()

@@ -3,6 +3,10 @@ OnTimer app
 +++++++++++
 
 run scheduler daemon and web interface
+
+to run::
+
+  python -m ontimer.app --root root/ --config sample-config.yaml server
   
 
 '''
@@ -11,9 +15,10 @@ from __future__ import print_function
 import argparse
 import sys
 import os
-from .db import Dao
+from .db import Dao,ServerStatus
 from . import server
 from . import event
+from . import utils
 import logging
 
 log = logging.getLogger(__name__)
@@ -35,6 +40,15 @@ def warning(*objs):
     
 def main():
     dao = None
+    def shutdown(args):
+        if not(dao.exists()):
+            raise ValueError('cannot shutdown not running OnTimer')
+        server_props = dao.get_server_properties()
+        if utils.find_enum(ServerStatus, server_props['server_status'] ) != ServerStatus.running:
+            raise ValueError('cannot shutdown not running OnTimer')
+        server_props.update( _server_status = ServerStatus.prepare_to_stop )
+        if dao.set_server_properties(server_props):
+            print ("Shutdown initiated")
     def set_conf(args):
         if not(args.config):
             raise ValueError("config has to be defined")
@@ -58,6 +72,7 @@ def main():
         
     parser = argparse.ArgumentParser(description='OnTimer - runs stuff on time')
     subparsers = parser.add_subparsers()
+    subparsers.add_parser('shutdown',help='notify ontimer server to shutdown').set_defaults(func=shutdown)
     subparsers.add_parser('server',help='starts ontimer server, if --config is defined load new config before start').set_defaults(func=run_server)
     subparsers.add_parser('get_conf',help='retrive most recent CONFIG out of ontimer db and stdout it').set_defaults(func=get_conf)
     subparsers.add_parser('set_conf',help='apply CONFIG to ontimer db').set_defaults(func=set_conf)

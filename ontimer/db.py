@@ -13,6 +13,8 @@ import os
 from . import utils
 from . import event
 import collections
+from enum import IntEnum
+
 
 default_filename = '.ontimer'
 
@@ -24,6 +26,14 @@ _EVENT =     'event',             'event_id'
 _TASK =      'task',              'task_id'
 _PREREQ =    'task_prereq',       'prereq_id'
 _TASKTYPE =  'task_type',         'task_type_id'
+
+class ServerStatus(IntEnum):
+    prepare_to_stop  =  -1      
+    shutdown = 0    
+    running = 1     
+
+
+server_properties_vars=['server_port','server_host','server_status']
 
 def _conn_decorator(f):
     def decorated(self, *args, **kwargs):
@@ -433,6 +443,23 @@ class Dao:
         return list(cursor.execute('select config_id,uploaded_dt,config_text,config_sha1 from config where config_id = ?', (config_id,)))[0]
 
     @_conn_decorator
+    def get_server_properties(self,cursor=None, conn=None):
+        q = 'select %s from settings where settings_id = 1' % ','.join(server_properties_vars)
+        return dict(zip( server_properties_vars, next(cursor.execute( q ))))
+
+    @_conn_decorator
+    def set_server_properties(self,server_props, cursor=None, conn=None):
+        set_vars = _assignments(server_properties_vars,server_props)
+        cursor.execute('''update settings set %s 
+             where settings_id = 1 and
+             server_status = :server_status
+            ''' % set_vars , server_props)
+        if cursor.rowcount == 1 :
+            conn.commit()
+            return True
+        return False        
+
+    @_conn_decorator
     def create_db(self, cursor=None, conn=None):
         cursor.execute('''CREATE TABLE event_type (
         event_type_id INTEGER primary key,
@@ -520,6 +547,9 @@ class Dao:
         cursor.execute('''CREATE TABLE settings (
         settings_id INTEGER primary key CHECK( settings_id in (1) ) default 1,
         current_config_id INTEGER null references config(config_id) default null,
+        server_port INTEGER null default null,
+        server_host TEXT null default null,
+        server_status INTEGER not null default 0,
         last_changed_dt TIMESTAMP default CURRENT_TIMESTAMP
         )''')
         

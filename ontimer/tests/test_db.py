@@ -8,6 +8,7 @@ import datetime
 from nose.tools import eq_,with_setup
 from .. import OnExp, OnState, event
 from collections import defaultdict
+from ontimer.db import ServerStatus
 
 
 #to test if sniffer is not hanging uncomment next line & save
@@ -186,6 +187,18 @@ def test_generators():
     eq_(gens[1].nextEvent() == None, True)
     
     
+def test_server_properties():
+    server_props = dao.get_server_properties()
+    eq_(server_props,{'server_host': None, 'server_port': None, 'server_status': 0})
+    server_props.update(_server_status = ServerStatus.running )
+    dao.set_server_properties(server_props)
+    server_props = dao.get_server_properties()
+    eq_(server_props,{'server_host': None, 'server_port': None, 'server_status': 1})
+    server_props.update(_server_status = ServerStatus.prepare_to_stop, 
+                        _server_host='localhost', _server_port=9753 )
+    dao.set_server_properties(server_props)
+    server_props = dao.get_server_properties()
+    eq_(server_props,{'server_host': u'localhost', 'server_port': 9753, 'server_status': -1})
     
     
        
