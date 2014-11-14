@@ -23,15 +23,16 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def set_logging(rootdir):
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+def set_logging(rootdir, quiet):
     error_handler = logging.FileHandler( os.path.join(rootdir, "debug.log"), "a" )
     error_handler.setLevel(logging.DEBUG)
     error_handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(message)s"))
     root = logging.getLogger()
-    root.addHandler(console_handler)
+    if not(quiet):
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        root.addHandler(console_handler)
     root.addHandler(error_handler)
     root.setLevel(logging.DEBUG)
 
@@ -48,7 +49,7 @@ def main():
             raise ValueError('cannot shutdown not running OnTimer')
         server_props.update( _server_status = ServerStatus.prepare_to_stop )
         if dao.set_server_properties(server_props):
-            print ("Shutdown initiated")
+            log.info ("Shutdown initiated")
     def set_conf(args):
         if not(args.config):
             raise ValueError("config has to be defined")
@@ -61,7 +62,7 @@ def main():
         if not(dao.exists()) or args.config :
             set_conf(args)
         log.debug('%r %r' % ('server', args) )
-        server.run_server(dao)
+        server.run_server(dao,address=args.address,port=args.port)
 
     def get_conf(args):
         if args.config:
@@ -72,16 +73,21 @@ def main():
         
     parser = argparse.ArgumentParser(description='OnTimer - runs stuff on time')
     subparsers = parser.add_subparsers()
-    subparsers.add_parser('shutdown',help='notify ontimer server to shutdown').set_defaults(func=shutdown)
-    subparsers.add_parser('server',help='starts ontimer server, if --config is defined load new config before start').set_defaults(func=run_server)
-    subparsers.add_parser('get_conf',help='retrive most recent CONFIG out of ontimer db and stdout it').set_defaults(func=get_conf)
-    subparsers.add_parser('set_conf',help='apply CONFIG to ontimer db').set_defaults(func=set_conf)
+    
+    subparsers.add_parser('shutdown', help='notify ontimer server to shutdown').set_defaults(func=shutdown)
+    subparsers.add_parser('server',   help='starts ontimer server, if --config is defined load new config before start').set_defaults(func=run_server)
+    subparsers.add_parser('get_conf', help='retrive most recent CONFIG out of ontimer db and stdout it').set_defaults(func=get_conf)
+    subparsers.add_parser('set_conf', help='apply CONFIG to ontimer db').set_defaults(func=set_conf)
+    parser.set_defaults(quiet=False)
+    parser.add_argument('--quiet', dest='quiet', action='store_true', help='quiet mode')
+    parser.add_argument("--port", type=int, default=9753, help='ontimer will listen on that port.')
+    parser.add_argument("--address", type=str, default='', help='ontimer will listen on that ip address.')
     parser.add_argument("--root", type=str, default='.', help='ontimer root dir to store db and artifacts. if not provided current directory will be used as default.')
     parser.add_argument("--config", type=str, help='config file to use.')
     args = parser.parse_args()
     abs_root = os.path.abspath(args.root)
     event.global_config.update(ontimer_root =abs_root)
-    set_logging(abs_root)
+    set_logging(abs_root,args.quiet)
     dao=Dao(abs_root)
     try:
         args.func(args)

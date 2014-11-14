@@ -13,7 +13,8 @@ install:
   - "pip install coveralls"
 
 # command to run tests
-script: nosetests --with-coverage --cover-package=ontimer
-
+script:  coverage run -p -m nose
 after_success:
-  coveralls
+  - coverage combine
+  - coverage report -m
+  - coveralls

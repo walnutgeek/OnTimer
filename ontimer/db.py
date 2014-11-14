@@ -382,6 +382,17 @@ class Dao:
         return False
 
     @_conn_decorator
+    def reset_running_tasks(self,cursor=None,conn=None):
+        '''
+        reset all ``running`` tasks to ``fail`` to ensure there no tasks left behind after 
+        crash/forced stop of ontimer
+        '''
+        cursor.execute("update task set task_status = %d where task_status = %d" 
+                       % (event.TaskStatus.fail, event.TaskStatus.running) )
+        conn.commit()
+        return cursor.rowcount
+
+    @_conn_decorator
     def apply_config(self,cursor=None,conn=None):
         r = self.get_config(conn=conn)
         config = event.Config(r[2])

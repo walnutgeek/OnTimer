@@ -36,20 +36,20 @@ events:
         wait_final_stage: true
     tasks:
       - name: start
-        cmd: boss --bs 9 
+        cmd: boss --bs 2 
       - name: branch1
         depends_on: [start]
-        cmd: boss --bs 23 
+        cmd: boss --bs 3 
       - name: branch2
         depends_on: [start]
-        cmd: boss --bs 12
+        cmd: boss --bs 1
       - name: join1
         depends_on: [branch1, branch2] 
         cmd: boss 
       - name: join2
         depends_on: [join1, branch3] 
-        cmd: boss --bs 7
+        cmd: boss --bs 2
       - name: branch3
         depends_on: [branch2] 
-        cmd: boss --bs 36
+        cmd: boss --bs 3
              

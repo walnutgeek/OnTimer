@@ -139,7 +139,6 @@ class State:
             self.dao.set_server_properties(server_props)
             self.main_loop.stop()
             self.scheduler.stop()
-            
             return
             
         #retry failed tasks
@@ -229,10 +228,9 @@ class FileHandler(web.StaticFileHandler):
         # Disable cache
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
 
-def run_server(_dao):
+def run_server(_dao,address="",port=9753):
     global state
     state = State(_dao)
-    state.check()
     webpath = os.path.join(os.path.dirname(__file__),'web')
     log.info( 'webpath=%s' % webpath)
     app = web.Application([
@@ -242,17 +240,24 @@ def run_server(_dao):
         (r"/(.*)", FileHandler,  {"path": webpath})
     ])
     try:
-        app.listen(9753)
+        log.info( 'port=%r, address=%r' % (port,address) )
+        app.listen(port,address=address)
     except socket.error, e:
         log.exception(e) 
         raise SystemExit(-1)
     #milliseconds
     interval_ms = 5 * 1000
     server_props = _dao.get_server_properties()
-    server_props.update(_server_status = ServerStatus.running )
-    _dao.set_server_properties(server_props)
+    if ServerStatus.running == server_props['server_status'] :
+        raise ValueError('server already running: %r' % server_props)
     
+    log.info('reseting %d tasks' % _dao.reset_running_tasks() )
+    
+    server_props.update( _server_status = ServerStatus.running, 
+                         _server_host = address, _server_port = port )
+    _dao.set_server_properties(server_props)
     state.main_loop = ioloop.IOLoop.instance()
     state.scheduler = ioloop.PeriodicCallback(state.check , interval_ms, io_loop = state.main_loop)
+    state.check()
     state.scheduler.start()
     state.main_loop.start()
