@@ -22,7 +22,7 @@ def test_app():
     dt=datetime.datetime(2014,9,15)
     dao.emit_event(gens[1].setupEvent(dt))
     Popen(['coverage', 'run', '-p','-m', 'ontimer.app', 
-           '--root', test_dir, 
+           '--root', test_dir,  
            '--port', '9766' ,'--quiet', 'server'])
     import time
     time.sleep(10) 

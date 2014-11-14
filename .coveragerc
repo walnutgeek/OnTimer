@@ -1,9 +1,8 @@
 # .coveragerc to control coverage.py
 [run]
-package=ontimer
 branch = True
-omit =
-    */tests/*.py
+include = ontimer/*.py
+omit =    */tests/*.py
 [report]
 # Regexes for lines to exclude from consideration
 exclude_lines =

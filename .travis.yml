@@ -13,8 +13,9 @@ install:
   - "pip install coveralls"
 
 # command to run tests
-script:  coverage run -p -m nose
-after_success:
+script:  
+  - coverage run -p -m nose
   - coverage combine
   - coverage report -m
+after_success:
   - coveralls
