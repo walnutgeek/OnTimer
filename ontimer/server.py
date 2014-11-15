@@ -128,17 +128,21 @@ class State:
     
     def check(self):
         server_props = self.dao.get_server_properties()
-        prepare_to_stop = utils.find_enum(ServerStatus, server_props['server_status']) == ServerStatus.prepare_to_stop
+        status = utils.find_enum(ServerStatus, server_props['server_status'])
+        prepare_to_stop = status == ServerStatus.prepare_to_stop
 
         if not(prepare_to_stop):
+            if status != ServerStatus.running:
+                server_props.update(_server_status = ServerStatus.running)
+                self.dao.set_server_properties(server_props)
             for task in self.dao.get_tasks_to_run():
                 self.runs.append(Run(self,task))
         self.runs = [run for run in self.runs if run.isRunning()]
         if prepare_to_stop and len(self.runs)==0:
-            server_props.update(_server_status = ServerStatus.shutdown )
-            self.dao.set_server_properties(server_props)
             self.main_loop.stop()
             self.scheduler.stop()
+            server_props.update(_server_status = ServerStatus.shutdown )
+            self.dao.set_server_properties(server_props)
             return
             
         #retry failed tasks

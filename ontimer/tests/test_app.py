@@ -23,10 +23,10 @@ def test_app():
     dao.emit_event(gens[1].setupEvent(dt))
     Popen(['coverage', 'run', '-p','-m', 'ontimer.app', 
            '--root', test_dir,  
-           '--port', '9766' ,'--quiet', 'server'])
+           '--port', '9766' , 'server'])
     import time
-    time.sleep(10) 
-    Popen(['coverage', 'run',  '-p','-m', 'ontimer.app', '--root', test_dir, '--quiet', 'shutdown'])
+    time.sleep(20) 
+    Popen(['coverage', 'run',  '-p','-m', 'ontimer.app', '--root', test_dir, 'shutdown'])
     time.sleep(2) 
 
 
