@@ -161,6 +161,9 @@ def test_broadcast():
     utils.broadcast([append0,append1,append2,append3],"!")
     eq_(str(acc),"['Hello John!', 'Hello let!', 'Privet sto let!', 'Privet John!']" )
     
+def test_Miscellaneous():
+    eq_(len(utils.platform_info()),7)
+    
 def test_Broadcast():
     acc = ['','','','']
     def append0(s):

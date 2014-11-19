@@ -219,7 +219,7 @@ class Dao:
 
     @_conn_decorator
     def update_event(self, event_data, cursor=None, conn=None):
-        if event.findEnum(event.EventStatus,event_data['_event_status']).isMetaStatus(event.MetaStates.final) :
+        if utils.find_enum(event.EventStatus,event_data['_event_status']).isMetaStatus(event.MetaStates.final) :
             event_data.update(_finished_dt = datetime.datetime.utcnow())
         set_vars = _assignments([
             'event_status',

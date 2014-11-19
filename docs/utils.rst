@@ -52,6 +52,7 @@ Utils
   
   .. automethod:: ontimer.utils.find_enum
   .. automethod:: ontimer.utils.gen_doc_for_enums
+  .. automethod:: ontimer.utils.enum_to_map
   
   
   Object identification mixins
@@ -63,5 +64,9 @@ Utils
   .. autoclass:: KeyCmpMixin
      :members:
   
+  Miscellaneous
+  -------------
+   
+  .. automethod:: ontimer.utils.platform_info
   
   

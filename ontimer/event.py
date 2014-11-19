@@ -29,18 +29,6 @@ def event_vars(event):
     evars.update( event_id = event_id, event_major = event_id / 100, event_minor = event_id % 100 )
     return evars
 
-def findEnum(enum,v):
-    ''' find enum by name or index 
-    
-    '''
-    for e in list(enum):
-        if e == v or e.value == v or e.name == v:
-            return e
-    raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
-
-def gen_doc_string(*args):
-    for enum in args:
-        enum.__doc__= 'enum: '+ ' , '.join('``%s``' % e.name for e in enum)
 
 class MetaStates(IntEnum):
     all = 0   
@@ -102,17 +90,15 @@ class VarTypes(Enum):
     def toStr(self, v):
         return None if v is None else self.value[1](v) 
 
-gen_doc_string(MetaStates,EventStatus,TaskStatus,GeneratorStatus,RunOutcome,VarTypes)
+utils.gen_doc_for_enums(MetaStates,EventStatus,TaskStatus,GeneratorStatus,RunOutcome,VarTypes)
 
-def enum_to_map(enum):
-    ''' convert enum to dict '''
-    return { e.name: e.value for e in list(enum)} 
+
 
 def get_meta():
     ''' prepare map of maps for all relevant enums '''
-    return { 'MetaStates' : enum_to_map(MetaStates),
-            'EventStatus' : enum_to_map(EventStatus),
-            'TaskStatus' : enum_to_map(TaskStatus) }
+    return { 'MetaStates' : utils.enum_to_map(MetaStates),
+            'EventStatus' : utils.enum_to_map(EventStatus),
+            'TaskStatus' : utils.enum_to_map(TaskStatus) }
             
 class Config:
     def __init__(self,s):
@@ -261,7 +247,7 @@ class Generator:
             self.cur_event_status = None
         else:
             cur_event = self.data['current_event']
-            self.cur_event_status=findEnum(EventStatus,cur_event['event_status'])
+            self.cur_event_status=utils.find_enum(EventStatus,cur_event['event_status'])
             if self.cur_event_status.isMetaStatus(MetaStates.final):
                 self.status = GeneratorStatus.ontime
             else:

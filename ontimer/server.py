@@ -236,6 +236,7 @@ def run_server(_dao,address="",port=9753):
     global state
     state = State(_dao)
     webpath = os.path.join(os.path.dirname(__file__),'web')
+    log.info( 'platform_info=%r' % (utils.platform_info()) )
     log.info( 'webpath=%s' % webpath)
     app = web.Application([
         (r'/', IndexHandler),
@@ -254,7 +255,6 @@ def run_server(_dao,address="",port=9753):
     server_props = _dao.get_server_properties()
     if ServerStatus.running == server_props['server_status'] :
         raise ValueError('server already running: %r' % server_props)
-    
     log.info('reseting %d tasks' % _dao.reset_running_tasks() )
     
     server_props.update( _server_status = ServerStatus.running, 

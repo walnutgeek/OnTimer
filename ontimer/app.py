@@ -93,7 +93,7 @@ def main():
         args.func(args)
     except ValueError, e:
         warning(e)
-        parser.print_help()
+        #parser.print_help()
         raise SystemExit(-1)
 
 if __name__ == '__main__':

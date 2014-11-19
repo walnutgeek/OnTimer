@@ -589,6 +589,10 @@ def find_enum(enum,v):
             return e
     raise ValueError('cannot find %r enum in %r ' % ( v, list(enum) ) )
 
+def enum_to_map(enum):
+    ''' convert enum to dict '''
+    return { e.name: e.value for e in list(enum)} 
+
 def gen_doc_for_enums(*args):
     '''Method generate docs strings for enums. Pass any number of enum classes, 
     all of them will be have ``__doc__`` appended with list of enum constants.
@@ -596,4 +600,19 @@ def gen_doc_for_enums(*args):
     for enum in args:
         enum.__doc__ = ( enum.__doc__ if enum.__doc__ else '' ) +  ' , '.join(sorted('``%s``' % e.name for e in enum))
 
+def platform_info():
+    '''
+    Collect information about platform in one dictionary.
+    
+    >>> from ontimer import utils
+    >>> utils.platform_info()
+    {'node': 'Sergeys-MacBook-Pro.local', 'python_version': '2.7.8', 
+     'python_implementation': 'CPython', 'system': 'Darwin', 
+     'machine': 'x86_64', 'release': '13.4.0', 'processor': 'i386'}
+    >>> 
+
+    '''
+    import platform
+    properties = ['machine','node','processor','python_version','python_implementation','system','release']
+    return { k: getattr(platform, k)() for k in properties}
 
