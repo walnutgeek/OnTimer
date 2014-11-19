@@ -117,17 +117,14 @@ $(function() {
   var ws = new WebSocket('ws://'+location.host+'/ws');
   var $message = $('#message');
   ws.onopen = function() {
-    $message.attr("class", 'label label-success');
-    $message.text('open');
+    $message.attr("class", 'label label-info');
   };
   ws.onmessage = function(ev) {
-    $message.attr("class", 'label label-info');
-    $message.hide();
+    $message.attr("class", 'label label-success');
     $message.fadeIn("slow");
-    $message.text('recieved message');
     setTimeout(function() {
-      $message.text('open')
-    }, 2000)
+      $message.attr("class", 'label label-info');
+    }, 1000)
 
     var json = JSON.parse(ev.data)
 
@@ -141,11 +138,9 @@ $(function() {
       update_event_table(globals.get_event_tasks)
   }, 1000 * 60);
   ws.onclose = function(ev) {
-    $message.attr("class", 'label label-important');
-    $message.text('closed');
+    $message.attr("class", 'label label-danger');
   };
   ws.onerror = function(ev) {
     $message.attr("class", 'label label-warning');
-    $message.text('error occurred');
   };
 });
