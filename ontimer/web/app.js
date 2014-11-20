@@ -157,8 +157,7 @@ $(function() {
     if( ws.dead ){
       console.log(ws.dead)
       ws = connect();
-    }
-    if (globals.get_event_tasks)
+    }else if (globals.get_event_tasks)
       update_event_table(globals.get_event_tasks)
   }, 1000 * 60);
 });
