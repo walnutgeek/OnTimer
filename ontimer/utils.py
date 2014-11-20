@@ -583,7 +583,8 @@ def find_enum(enum,v):
     '''
     Find enum by name or by value (value is index in ``IntEnum``) or by itself. 
     Method raise `ValueError` if enum class does not contain given name, value, 
-    nor such enum instance.  '''
+    nor such enum instance.  
+    '''
     for e in enum:
         if e == v or e.value == v or e.name == v:
             return e

@@ -32,8 +32,8 @@ $(function() {
     return false;
   }
 
-  var table = d3.select("#data_container").append("table").attr('class',
-      'gridtable');
+  var table = d3.select("#data_container").append("table")
+    .attr('class', 'gridtable');
   thead = table.append("thead");
   thead_tr = thead.append("tr");
 
@@ -113,34 +113,52 @@ $(function() {
     cells.exit().remove();
   }
 
-  var $container = $('#debug');
-  var ws = new WebSocket('ws://'+location.host+'/ws');
-  var $message = $('#message');
-  ws.onopen = function() {
-    $message.attr("class", 'label label-info');
-  };
-  ws.onmessage = function(ev) {
-    $message.attr("class", 'label label-success');
-    $message.fadeIn("slow");
-    setTimeout(function() {
+  function connect(){
+    var $container = $('#debug');
+    var $message = $('#message');
+    var ws = new WebSocket('ws://'+location.host+'/ws');
+    
+    ws.onopen = function() {
+      $message.text("On");
       $message.attr("class", 'label label-info');
-    }, 1000)
-
-    var json = JSON.parse(ev.data)
-
-    if (!process_known_content(json)) {
-      // content is unknown just output json
-      // visualize(json)
-    }
-  };
+    };
+    
+    ws.onmessage = function(ev) {
+      $message.attr("class", 'label label-success');
+      $message.text("On");
+      $message.fadeIn("slow");
+      setTimeout(function() {
+        $message.attr("class", 'label label-info');
+      }, 1000)
+  
+      var json = JSON.parse(ev.data)
+  
+      if (!process_known_content(json)) {
+        // content is unknown just output json
+        // visualize(json)
+      }
+    };
+    
+    ws.onclose = function(ev) {
+      $message.text("Off");
+      $message.attr("class", 'label label-danger');
+      ws.dead=true;
+    };
+    ws.onerror = function(ev) {
+      $message.attr("class", 'label label-warning');
+    };
+    ws.dead=false;
+    console.log(ws)
+    return ws;
+  }
+  var ws = connect();
+  
   setInterval(function() {
+    if( ws.dead ){
+      console.log(ws.dead)
+      ws = connect();
+    }
     if (globals.get_event_tasks)
       update_event_table(globals.get_event_tasks)
   }, 1000 * 60);
-  ws.onclose = function(ev) {
-    $message.attr("class", 'label label-danger');
-  };
-  ws.onerror = function(ev) {
-    $message.attr("class", 'label label-warning');
-  };
 });
