@@ -33,7 +33,7 @@ def test_app():
            '--root', test_dir,  
            '--port', '9766' , 'server'])
     import time
-    time.sleep(20) 
+    time.sleep(50) 
     Popen(['coverage', 'run',  '-p','-m', 'ontimer.app', '--root', test_dir, 'shutdown'])
     time.sleep(2) 
 

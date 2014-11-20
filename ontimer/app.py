@@ -88,6 +88,7 @@ def main():
     abs_root = os.path.abspath(args.root)
     event.global_config.update(ontimer_root =abs_root)
     set_logging(abs_root,args.quiet)
+    log.info("abs_root= %r" % abs_root)
     dao=Dao(abs_root)
     try:
         args.func(args)
