@@ -9,8 +9,9 @@ from ontimer import event , utils, db
 from datetime import datetime
 from subprocess import Popen
 
+sample_config='./sample-config.yaml'
 
-def create_sample_config_server(abs_dir, config_file = './sample-config.yaml'):
+def create_sample_config_server(abs_dir, config_file = sample_config):
     print('creating %s server in : %s' % (config_file,abs_dir))
     if os.path.isdir(abs_dir):
         shutil.rmtree(abs_dir)
@@ -31,7 +32,12 @@ def test_app():
     dao = create_sample_config_server(test_dir)
     Popen(['coverage', 'run', '-p','-m', 'ontimer.app', 
            '--root', test_dir,  
-           '--port', '9766' , 'server'])
+           '--port', '9766' , 'server']) 
+    Popen(['coverage', 'run', '-p','-m', 'ontimer.app', 
+           '--root', test_dir, '--quiet', 'get_conf']) 
+    Popen(['coverage', 'run', '-p','-m', 'ontimer.app', 
+           '--root', test_dir, '--quiet', '--config',sample_config, 'set_conf', ]) 
+
     import time
     time.sleep(50) 
     Popen(['coverage', 'run',  '-p','-m', 'ontimer.app', '--root', test_dir, 'shutdown'])
