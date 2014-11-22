@@ -31,14 +31,40 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        <li class="active"><a href="#">All<span class="sr-only">(current)</span></a></li>
-        <li><a href="#">Link</a></li>
+        <li class="active"><a href="#">Reset filter<span class="sr-only">(current)</span></a></li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" id="event-drop"
-          role="button" aria-expanded="false">Events <span class="caret"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" 
+             id="time-type" role="button" aria-expanded="false">
+          <span class="selected-dropdown">Updated:</span>
+          <span class="caret"></span></a>
           <ul class="dropdown-menu" role="menu">
+            <li><a href="#">Updated</a></li>
+            <li><a href="#">Scheduled</a></li>
+            <li><a href="#">Updated or scheduled</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" 
+             id="time-frame" role="button" aria-expanded="false">
+          <span class="selected-dropdown">1 day ago</span>
+          <span class="caret"></span></a>
+          <ul class="dropdown-menu" role="menu">
+            <li><a href="#">1 day ago</a></li>
+            <li><a href="#">2 days ago</a></li>
+            <li><a href="#">3 days ago</a></li>
+            <li><a href="#">1 week ago</a></li>
+            <li><a href="#">1 month ago</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" 
+             id="event-drop" role="button" aria-expanded="false">
+          <span class="selected-dropdown">Event: -All-</span>
+          <span class="caret"></span></a>
+          <ul class="dropdown-menu" role="menu">
+            <li><a href="#">-All-</a></li>
+            <li><a href="#">price</a></li>
             <li><a href="#">tree</a></li>
-            <li><a href="#">Another action</a></li>
           </ul>
         </li>
       </ul>
@@ -48,9 +74,6 @@
         </div>
         <button type="submit" class="btn btn-default">Submit</button>
       </form>
-      <ul class="nav navbar-nav navbar-right">
-        <li><a href="#">Link</a></li>
-      </ul>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </nav>

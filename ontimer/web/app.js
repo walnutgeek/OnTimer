@@ -42,7 +42,9 @@ $(function() {
         'updated', 'depend_on' ];
 
     var event_group_header = function(d) {
-      return [ $_.TCell(d, 'event_string', 2),
+      return [ 
+          $_.TCell(d, 'event_id', 1),
+          $_.TCell(d, 'event_string', 1),
           $_.TCell(d, 'scheduled_dt', 1, $_.utils.relativeDateString),
           $_.TCell(d, 'event_status', 1, globals.EventStatus.key),
           $_.TCell(d, undefined, 1),
@@ -117,7 +119,6 @@ $(function() {
     var $container = $('#debug');
     var $message = $('#message');
     var ws = new WebSocket('ws://'+location.host+'/ws');
-    
     ws.onopen = function() {
       $message.text("On");
       $message.attr("class", 'label label-info');
@@ -148,14 +149,12 @@ $(function() {
       $message.attr("class", 'label label-warning');
     };
     ws.dead=false;
-    console.log(ws)
     return ws;
   }
   var ws = connect();
   
   setInterval(function() {
     if( ws.dead ){
-      console.log(ws.dead)
       ws = connect();
     }else if (globals.get_event_tasks)
       update_event_table(globals.get_event_tasks)

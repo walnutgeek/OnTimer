@@ -1,6 +1,32 @@
 ToDo
 ----
 
+##Now
+  * UI
+    * chckbox and link in table
+    * hover over depend_on shows arrows
+  * task summary
+  * log screen
+  * implement log subscription
+  * event summary
+   
+##Later 
+  * documentation
+    * home page and quick start 
+    * convert docs MD into rst
+	  * pandoc ?
+  * Testing
+   * test interaction in phantomjs
+   * javascript tests and coverage
+   * Subscription cases
+     * [word1 word2] (search in event_string, task_name, generator name)
+     * :a[age in days]
+     * :e[event_id]
+     * :t[event_task_id]
+     * :h[event_task_id.run] historical log
+     * :l[event_task_id] latest run log
+     * :g[generator_id] 
+
 ##Done
 
    * generator schema changes 
@@ -30,33 +56,13 @@ ToDo
     * implement subscriptions tracker object on server side with data propagation tree.
     * now freeze date
   	* test
-   
-##Now
-  * rework page design with bootstrap 
-  * event summary
-  * task summary
-  * implement log subscription
-  * Screens
-    * Screen: Event summary 
-    * Screen: Task Screen
-  * documentation 
-    * structure skeleton
-    * templates for all modules
-    * home page and quick start 
-	* convert docs MD into rst
-	  * pandoc ?
-   
-##Later 
   * Consider better name KeyGroupValue
    * Refactor 
      * websocket connection from javascript (no hard coding) 
-   * Subscription
-     * [word1 word2] (search in event_string, task_name, generator name)
-     * :a[age in days]
-     * :e[event_id]
-     * :t[event_task_id]
-     * :h[event_task_id.run] historical log
-     * :l[event_task_id] latest run log
-     * :g[generator_id] 
+  * rework page design with bootstrap 
+  * documentation 
+    * structure skeleton
+    * templates for all modules
+   
       
 
