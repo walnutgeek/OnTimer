@@ -9,7 +9,7 @@ $(function() {
   $(document).on('click', '.history_nav', function(e) {
       var urlPath = $(this).attr('href');
       var title = $(this).text();
-      History.pushState(null, null, urlPath);
+      History.pushState({time: new Date()}, null, urlPath);
       return false; // prevents default click action of <a ...>
   });
 
@@ -106,7 +106,7 @@ $(function() {
   }); 
   State = History.getState();
   console.log('about pushstate:'+window.location.pathname);
-  History.pushState({urlPath: window.location.pathname}, $("title").text(), location.url);
+  History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);
 
   $('#submit').click(function(event){
 	  var u = '/events/'+globals.interval.type.value + globals.interval.time.value;
@@ -117,7 +117,7 @@ $(function() {
 	  if( search !== '' ){
 		  u+='?q='+encodeURI(search);
 	  }
-	  History.pushState(null, null, u);
+	  History.pushState({time: new Date()}, null, u);
 	  return false;
   });
   

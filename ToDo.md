@@ -2,7 +2,6 @@ ToDo
 ----
 
 ##Now
-  
   * event screen
   * task screen
   * log screen
@@ -29,6 +28,7 @@ ToDo
 
 ##Done
 
+  * Bug: history does not refresh if same url provided in push state.
   * implement on sever side globals.meta.TimeVars
   * url scheme
 	  * event list url: /events/<filter>?q=<search>
