@@ -2,13 +2,11 @@ ToDo
 ----
 
 ##Now
-  * UI
-    * chckbox and link in table
-    * hover over depend_on shows arrows
-  * task summary
+  
+  * event screen
+  * task screen
   * log screen
-  * implement log subscription
-  * event summary
+  	* implement log subscription
    
 ##Later 
   * documentation
@@ -26,9 +24,19 @@ ToDo
      * :h[event_task_id.run] historical log
      * :l[event_task_id] latest run log
      * :g[generator_id] 
+  * UI
+    * hover over depend_on shows arrows
 
 ##Done
 
+  * implement on sever side globals.meta.TimeVars
+  * url scheme
+	  * event list url: /events/<filter>?q=<search>
+	  * event summary url: /event/3
+	  * task summary url: /task/320
+	  * log screen url: first log /log/320/0, last: /log/320/-1
+   * UI
+     * chckbox and link in table
    * generator schema changes 
    * Generator object
    * Generator.setupEvent

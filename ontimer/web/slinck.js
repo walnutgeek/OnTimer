@@ -1462,9 +1462,9 @@
 //          ----                                               
         .replace(/(\n)----(\s*\n)/g, "$1<hr>$2")
 // Take care of cases:
-//        ÕÕitalicÕÕ
-//        ÕÕÕboldÕÕÕ
-//        ÕÕÕÕitalic boldÕÕÕÕ
+//        ï¿½ï¿½italicï¿½ï¿½
+//        ï¿½ï¿½ï¿½boldï¿½ï¿½ï¿½
+//        ï¿½ï¿½ï¿½ï¿½italic boldï¿½ï¿½ï¿½ï¿½
         .replace(/(''+)([^'\n]+)(''+)/g, buildReplaceFunction(4,  function (len,g1,t,g2){
           var r = new XmlNode(len === 2 ? "i" : "b");
           if (len === 4){
@@ -1613,7 +1613,7 @@
       return {
         colspan: colspan || 1,
         content: function(){
-          return !varName ? '' : format ? format(d[varName]) : d[varName]; 
+          return !varName ? '' : format ? format(d[varName],d) : d[varName]; 
         }
       };
     }

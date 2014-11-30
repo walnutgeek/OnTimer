@@ -36,7 +36,8 @@ events:
         wait_final_stage: true
     tasks:
       - name: start
-        cmd: python -m ontimer.boss --bs 2 
+        cmd: pwd 
+# python -m ontimer.boss --bs 2 
       - name: branch1
         depends_on: [start]
         cmd: python -m ontimer.boss --bs 3 

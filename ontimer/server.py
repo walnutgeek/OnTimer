@@ -3,6 +3,7 @@ Server module
 running on websocket and static file web interface on tornado. 
 Same tornado ioloop managing concurrent jobs and recording 
 out/err streams in files.
+
 '''
 from tornado import websocket, web, ioloop, iostream
 import socket
@@ -14,6 +15,7 @@ import os
 import fcntl
 import sys
 
+from . import dpt
 from . import event
 from .db import Dao, ServerStatus
 from . import utils
@@ -121,7 +123,12 @@ class State:
         self.config = self.dao.apply_config()
         self.tasks = None
         self.taskdict = None
-        self.meta_json = json.dumps({ 'meta' : event.get_meta()} )
+        meta = event.get_meta()
+        time_letty_map = dpt.Letty.time.value['vars']
+        meta['EventTypes'] = { et.event_type_id : et.name for et in self.config.events } 
+        meta['EventTypes']['*']= '- All -';
+        meta['TimeVars'] = { letter : time_letty_map[letter]['name'] for letter in time_letty_map} 
+        self.meta_json = json.dumps({ 'meta' : meta} )
         self.json = {}
         self.runs = []
         event.global_config.update(self.dao.get_global_vars())
@@ -240,6 +247,9 @@ def run_server(_dao,address="",port=9753):
     log.info( 'webpath=%s' % webpath)
     app = web.Application([
         (r'/', IndexHandler),
+        (r'/event.*', IndexHandler),
+        (r'/task/.*', IndexHandler),
+        (r'/log/.*', IndexHandler),
         (r'/ws', SocketHandler),
         (r'/api', ApiHandler),
         (r"/(.*)", FileHandler,  {"path": webpath})

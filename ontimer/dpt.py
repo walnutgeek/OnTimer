@@ -22,16 +22,22 @@ class Letty(Enum):
     
     Currently defined following Letty's:  
     '''
-    time =  { 'vars' : { 'z' : { 'contains': ['u','s'], 'time': ('scheduled_dt','updated_dt') }  , 
-                   'u' : { 'time': ('updated_dt') }, 
-                   's' : { 'time': ('scheduled_dt') } } } 
+    time =  { 'vars' : { 
+                'z' : { 'name' : 'Updated or Scheduled',
+                        'contains': ['u','s'], 
+                        'time': ('scheduled_dt','updated_dt') }  , 
+                'u' : { 'name' : 'Updated',
+                        'time': ('updated_dt') }, 
+                's' : { 'name' : 'Scheduled',
+                        'time': ('scheduled_dt') } } } 
     event = { 'vars' : {  'e' : { 'event' : 'event_id' },
                    'E' : { 'event' : 'event_type_id' },
                    'g' : { 'event' : 'generator_id' },
                    't' : { 'task' : 'task_id' },
                    'T' : { 'task' : 'task_type_id' } } }
     log =   { 'vars' : { 'l' : { 'artifact' : 'task_id' } ,
-                 'r' : { 'artifact' : 'run' } } }
+                 'r' : { 'artifact' : 'run' },
+                 'R' : { 'artifact' : 'inverse_run' } } }
     
 utils.gen_doc_for_enums(Letty)
     

@@ -1,8 +1,31 @@
 $(function() {
+  console.log('page reload');
+	
   var globals = {
     selection : {}
   };
 
+  var History = window.History;
+  $(document).on('click', '.history_nav', function(e) {
+      var urlPath = $(this).attr('href');
+      var title = $(this).text();
+      History.pushState(null, null, urlPath);
+      return false; // prevents default click action of <a ...>
+  });
+
+
+  var updateContent = function(State) {
+	  console.log(State.hash);
+//    var selector = '#' + State.data.urlPath.substring(1);
+//    if ($(selector).length) { //content is already in #hidden_content
+//        $('#content').children().appendTo('#hidden_content');
+//        $(selector).appendTo('#content');
+//    } else { 
+//        $('#content').children().clone().appendTo('#hidden_content');
+//        loadAjaxContent('#content', State.url, selector);
+//    }
+  };
+  
   function process_known_content(json) {
     if (json.get_event_tasks) {
       globals.events = {}
@@ -19,31 +42,112 @@ $(function() {
           delete globals.selection[key];
         }
       }
-      globals.get_event_tasks = json.get_event_tasks
-      update_event_table(json.get_event_tasks)
+      globals.get_event_tasks = json.get_event_tasks;
+      update_event_table(json.get_event_tasks);
+
       return true;
     }
     if (json.meta) {
       globals.meta = json.meta;
-      globals.EventStatus = $_.utils.BiMap(globals.meta.EventStatus)
-      globals.TaskStatus = $_.utils.BiMap(globals.meta.TaskStatus)
+      globals.EventStatus = $_.utils.BiMap(globals.meta.EventStatus);
+      globals.TaskStatus = $_.utils.BiMap(globals.meta.TaskStatus);
+      globals.event_types = { 
+    	  value : '*',
+    	  choices : globals.meta.EventTypes
+      };
+      globals.interval={
+    		  type: { 
+    			  value : 'z' ,
+    		      choices :  globals.meta.TimeVars 
+    		  },
+              time: { 
+            	  value : 1,
+            	  choices : { 
+            		  1: '1 day ago',
+            		  2: '2 days ago',
+            		  3: '3 days ago',
+            		  7: '1 week ago',
+            		  31: '1 month ago' }
+              }
+      };
+      
+      function update_dropdown(id,data,prefix){
+    	  prefix = prefix || '';
+    	  $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+    	  var ddm =$('#'+id+' .dropdown-menu');
+    	  ddm.empty();
+    	  for (var key in data.choices) {
+			  if (data.choices.hasOwnProperty(key)) {
+			    ddm.append( '<li><a href="#" data-value="'+key+'">'+data.choices[key]+'</a></li>' );
+			  }
+		  }
+    	  $('#'+id+' .dropdown-menu li a').click(function(event){
+    		  data.value=event.target.attributes["data-value"].value;
+    		  $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+              $(this).closest(".dropdown-menu").prev().dropdown("toggle");
+    		  return false; 
+    	  });
+    	  
+      }
+      update_dropdown('interval-type',globals.interval.type);
+      update_dropdown('interval-time',globals.interval.time);
+      update_dropdown('event-type',globals.event_types,'Events: ');
+      
       return true;
     }
     return false;
   }
+  
+  
 
+  // Content update and back/forward button handler
+  History.Adapter.bind(window, 'statechange', function() {
+      updateContent(History.getState());
+  }); 
+  State = History.getState();
+  console.log('about pushstate:'+window.location.pathname);
+  History.pushState({urlPath: window.location.pathname}, $("title").text(), location.url);
+
+  $('#submit').click(function(event){
+	  var u = '/events/'+globals.interval.type.value + globals.interval.time.value;
+	  if( globals.event_types.value !== '*'){
+		  u+='e'+globals.event_types.value;
+	  }
+	  var search = $('#search').val();
+	  if( search !== '' ){
+		  u+='?q='+encodeURI(search);
+	  }
+	  History.pushState(null, null, u);
+	  return false;
+  });
+  
   var table = d3.select("#data_container").append("table")
     .attr('class', 'gridtable');
   thead = table.append("thead");
   thead_tr = thead.append("tr");
 
   function update_event_table(events) {
-    var column_names = [ 'id', 'name', 'scheduled', 'status', 'run_count',
-        'updated', 'depend_on' ];
-
+    var column_names = [ '', 'id', 'name', 
+                         'scheduled', 'status', 'run_count',
+                         'updated', 'depend_on' ];
+    
+    function history_nav(href,text){
+		return '<a href="/'+href+'" class="history_nav">'+text+'</a>';
+    }
+    
+    function a(screen){
+    	return function(cell){
+    		return history_nav( screen+'/'+cell, cell);
+    	}
+    }
+    
+    function none(){return '';};
+    function checkbox(v){ return '<input type="checkbox" class="task_select" value="'+v+'" />'; }
+    
     var event_group_header = function(d) {
       return [ 
-          $_.TCell(d, 'event_id', 1),
+              $_.TCell(d, 'event_id', 1 , none),
+          $_.TCell(d, 'event_id', 1 , a('event')),
           $_.TCell(d, 'event_string', 1),
           $_.TCell(d, 'scheduled_dt', 1, $_.utils.relativeDateString),
           $_.TCell(d, 'event_status', 1, globals.EventStatus.key),
@@ -53,7 +157,12 @@ $(function() {
     };
 
     var cells_data = function(d) {
-      return [ $_.TCell(d, 'task_id', 1), $_.TCell(d, 'task_name', 1),
+      return [ 
+              $_.TCell(d, 'task_id', 1 , checkbox ), 
+               $_.TCell(d, 'task_id', 1 , a('task')), 
+               $_.TCell(d, 'task_name', 1, function(cell,d){
+            	   return history_nav('events/T'+d.task_type_id, cell);
+               }),
           $_.TCell(d, 'run_at_dt', 1, $_.utils.relativeDateString),
           $_.TCell(d, 'task_status', 1, globals.TaskStatus.key),
           $_.TCell(d, 'run_count', 1),
@@ -79,7 +188,7 @@ $(function() {
     event_group_ths.enter().append('th').attr('colspan', function(d) {
       return d.colspan
     });
-    event_group_ths.text(function(d) {
+    event_group_ths.html(function(d) {
       return d.content();
     });
 
@@ -91,10 +200,11 @@ $(function() {
     }, function(d) {
       return d.task_id;
     });
-    rows.enter().append("tr").attr("class", "task_row").on("click", task_click);
-    rows.style('background-color', function(t) {
-      return globals.selection[t.task_id] ? "#ffffaa" : "#ffffff";
-    });
+    rows.enter().append("tr").attr("class", "task_row")
+    //.on("click", task_click);
+//    rows.style('background-color', function(t) {
+//      return globals.selection[t.task_id] ? "#ffffaa" : "#ffffff";
+//    });
     rows.exit().remove();
 
     function task_click(t) {
@@ -109,10 +219,11 @@ $(function() {
     // create a cell in each row for each column
     var cells = rows.selectAll("td").data(cells_data);
     cells.enter().append("td");
-    cells.text(function(d) {
+    cells.html(function(d) {
       return d.content();
     });
     cells.exit().remove();
+    
   }
 
   function connect(){
