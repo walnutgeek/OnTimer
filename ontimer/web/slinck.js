@@ -118,6 +118,22 @@
       return obj;
     }
 
+    function splitUrlPath (urlpath) {
+      var path = urlpath.split("/");
+      var last = path[path.length-1].split('?');
+      var result = { path: path , variables: {}};
+      if( last.length == 2 ){
+        path[path.length-1] = last[0];
+        last[1].split("&").forEach(function(part) {
+          var item = part.split("=");
+          if( item[0].length > 0 ){
+            result.variables[item[0]] = decodeURIComponent(item[1]);
+          }
+        });
+      }
+      return result;
+    }
+    
     function convertFunctionsToObject(funcList) {
       return convertListToObject(funcList, combineKeyExtractors(getPropertyExtractor("name"), extractFunctionName));
     }
@@ -463,7 +479,7 @@
         ensureString, isObject, isString, isNumber, isBoolean, isFunction, 
         isDate, isPrimitive, isNull, extractArray, binarySearch, repeat, 
         sequence, escapeXmlAttribute, escapeXmlBody, brodcastCall, 
-        isArrayEmpty, detectRepeatingChar, detectPrefix ]);
+        isArrayEmpty, detectRepeatingChar, detectPrefix, splitUrlPath ]);
   })();
 
   $_.percent_encoding = (function() {

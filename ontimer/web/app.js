@@ -1,5 +1,4 @@
 $(function() {
-  console.log('page reload');
 	
   var globals = {
     selection : {}
@@ -15,7 +14,8 @@ $(function() {
 
 
   var updateContent = function(State) {
-	  console.log(State.hash);
+	  console.log(JSON.stringify($_.utils.splitUrlPath(State.hash)));
+	  
 //    var selector = '#' + State.data.urlPath.substring(1);
 //    if ($(selector).length) { //content is already in #hidden_content
 //        $('#content').children().appendTo('#hidden_content');
@@ -105,7 +105,6 @@ $(function() {
       updateContent(History.getState());
   }); 
   State = History.getState();
-  console.log('about pushstate:'+window.location.pathname);
   History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);
 
   $('#submit').click(function(event){
