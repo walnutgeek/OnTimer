@@ -1,84 +1,133 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>OnTimer</title>
-    <link href="/css/bootstrap.css" rel="stylesheet">
-	<link href="/js/prettify.css" rel="stylesheet">
-	<link href="/app.css" rel="stylesheet">
-	<script src="/slinck.js"></script>
-	<script src="/js/jquery-1.11.1.min.js"></script>
-	<script src="/js/jquery.history.js"></script>
-	<script src="/js/bootstrap.min.js"></script>
-	<script src="/d3/d3.min.js"></script>
-	<script src="/app.js"></script>
+<title>OnTimer</title>
+<link href="/css/bootstrap.css" rel="stylesheet">
+<link href="/js/prettify.css" rel="stylesheet">
+<link href="/app.css" rel="stylesheet">
+<script src="/slinck.js"></script>
+<script src="/js/jquery-1.11.1.min.js"></script>
+<script src="/js/jquery.history.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/d3/d3.min.js"></script>
+<script src="/app.js"></script>
 </head>
 <body>
+	<div class="container" id="page">
+		<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+			<div class="container-fluid">
+				<!-- Brand and toggle get grouped for better mobile display -->
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed"
+						data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+						<span class="sr-only">Toggle navigation</span> <span
+							class="icon-bar"></span> <span class="icon-bar"></span> <span
+							class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#"><span
+						class="label label-default" id="message">On</span><span
+						class="label label-primary">Timer</span></a>
 
-  <div class="container" id="page">
-<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
-  <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="#"><span  class="label label-default" id="message">On</span><span class="label label-primary">Timer</span></a>
-      
-    </div>
+				</div>
 
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav" id="dropdowns">
-        <li class="dropdown" id="interval-type">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" 
-              role="button" aria-expanded="false">
-          <span class="last-selected">?</span>
-          <span class="caret"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="#">?</a></li>
-            <li><a href="#">??</a></li>
-          </ul>
-        </li>
-        <li class="dropdown" id="interval-time">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" 
-              role="button" aria-expanded="false">
-          <span class="last-selected">?</span>
-          <span class="caret"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="#">?</a></li>
-            <li><a href="#">??</a></li>
-          </ul>
-        </li>
-        <li class="dropdown" id='event-type'>
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" 
-             role="button" aria-expanded="false">
-          <span class="last-selected">Event: ?</span>
-          <span class="caret"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="#">-All-</a></li>
-            <li><a href="#">?</a></li>
-            <li><a href="#">??</a></li>
-          </ul>
-        </li>
-      </ul>
-      <form class="navbar-form navbar-right" role="search">
-        <div class="form-group">
-          <input type="text" class="form-control" id='search' placeholder="Search">
-        </div>
-        <button type="submit" class="btn btn-default" id='submit'>Submit</button>
-      </form>
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
-</nav>
+				<!-- Collect the nav links, forms, and other content for toggling -->
+				<div class="collapse navbar-collapse"
+					id="bs-example-navbar-collapse-1">
+					<ul class="nav navbar-nav">
+						<li class="active" id="query_li"><a href="#">Query</a></li>
+						<li id="type_li"><a href="#">tree</a></li>
+						<li id="event_li"><a href="#">2014-12-04 10:00:00</a></li>
+						<li id="task_li"><a href="#">#join1</a></li>
+						<li id="run_li"><a href="#">last run</a></li>
+					</ul>
 
-    <h3>Events</h3>
-      <div id="data_container" >
-      </div>
-      <div id="debug" >
-      </div>
-  </div>
+
+					<ul class="nav navbar-nav" id="query_dropdowns"
+						style="display: none;">
+						<li class="dropdown" id="interval-type"><a href="#"
+							class="dropdown-toggle" data-toggle="dropdown" role="button"
+							aria-expanded="false"> <span class="last-selected">?</span> <span
+								class="caret"></span></a>
+							<ul class="dropdown-menu" role="menu">
+								<li><a href="#">?</a></li>
+								<li><a href="#">??</a></li>
+							</ul></li>
+						<li class="dropdown" id="interval-time"><a href="#"
+							class="dropdown-toggle" data-toggle="dropdown" role="button"
+							aria-expanded="false"> <span class="last-selected">?</span> <span
+								class="caret"></span></a>
+							<ul class="dropdown-menu" role="menu">
+								<li><a href="#">?</a></li>
+								<li><a href="#">??</a></li>
+							</ul></li>
+						<li class="dropdown" id='event-type'><a href="#"
+							class="dropdown-toggle" data-toggle="dropdown" role="button"
+							aria-expanded="false"> <span class="last-selected">Event:
+									?</span> <span class="caret"></span></a>
+							<ul class="dropdown-menu" role="menu">
+								<li><a href="#">-All-</a></li>
+								<li><a href="#">?</a></li>
+								<li><a href="#">??</a></li>
+							</ul></li>
+					</ul>
+					<form class="navbar-form navbar-right" role="search">
+						<div class="form-group">
+							<input type="text" class="form-control" id='search'
+								placeholder="Search">
+						</div>
+						<button type="submit" class="btn btn-default" id='submit'>Submit</button>
+					</form>
+				</div>
+				<!-- /.navbar-collapse -->
+			</div>
+			<!-- /.container-fluid -->
+		</nav>
+
+		<h3>Events</h3>
+		<div class="row">
+			<div class="col-md-9" role="main" id="data_container">
+			</div>
+			<div class="col-md-3">
+				<div class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix"
+					role="complementary">
+					<ul class="nav bs-docs-sidenav">
+
+						<li class=""><a href="#glyphicons">Glyphicons</a>
+							<ul class="nav">
+								<li class=""><a href="#glyphicons-glyphs">Available
+										glyphs</a></li>
+								<li><a href="#glyphicons-how-to-use">How to use</a></li>
+								<li><a href="#glyphicons-examples">Examples</a></li>
+							</ul></li>
+						<li><a href="#dropdowns">Dropdowns</a>
+							<ul class="nav">
+								<li><a href="#dropdowns-example">Example</a></li>
+								<li><a href="#dropdowns-alignment">Alignment</a></li>
+								<li><a href="#dropdowns-headers">Headers</a></li>
+								<li><a href="#dropdowns-divider">Divider</a></li>
+								<li><a href="#dropdowns-disabled">Disabled menu items</a></li>
+							</ul></li>
+				</div>
+			</div>
+		</div>
+	</div>
+	<footer class="navbar  navbar-default navbar-fixed-bottom"
+		role="navigation">
+		<div class="container-fluid">
+			<form class="navbar-form navbar-right">
+				<button type="submit" class="btn disabled" id='skip_task'>Skip
+					Task</button>
+				<button type="submit" class="btn" id='skip_branch'>Skip
+					Branch</button>
+				<button type="submit" class="btn" id='rerun_task'>Rerun
+					Task</button>
+				<button type="submit" class="btn" id='rerun_branch'>Rerun
+					Branch</button>
+			</form>
+		</div>
+		<!-- /.navbar-collapse -->
+		</div>
+		<!-- /.container-fluid -->
+	</footer>
 </body>
 </html>

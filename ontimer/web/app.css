@@ -1,3 +1,9 @@
+
+.bs-docs-sidebar.affix{
+	position:fixed;
+	top:20px;
+}
+
 table.gridtable {
 	font-family: verdana,arial,sans-serif;
 	font-size:11px;

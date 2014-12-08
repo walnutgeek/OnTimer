@@ -2,10 +2,15 @@ ToDo
 ----
 
 ##Now
+
+  * Implement swithching between screens
+  * query screen
+    * selected tasks sidebar
+    * automatic action bar
   * event screen
   * task screen
   * log screen
-  	* implement log subscription
+  * implement log subscription
    
 ##Later 
   * documentation
@@ -27,7 +32,7 @@ ToDo
     * hover over depend_on shows arrows
 
 ##Done
-
+  * design Nav bar,toolbar ad sidebar
   * Bug: history does not refresh if same url provided in push state.
   * implement on sever side globals.meta.TimeVars
   * url scheme
