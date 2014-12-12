@@ -1,9 +1,72 @@
 $(function() {
 	
   var globals = {
-    selection : {}
+    selection : {},
+    data_is_ready: function(){ return this.get_event_tasks; }
+  };
+  
+//  | Task                          | PAUSE | UNPAUSE | SKIP | RETRY | RETRY_TREE |
+//  |-------------------------------|-------|---------|------|-------|------------|
+//  | scheduled,running,fail,retry  |  Y    |  N      | Y    |  N    | N          |
+//  | paused                        |  N    |  Y      | Y    |  N    | N          |
+//  | success, skip                 |  N    |  N      | N    |  Y    | Y          |
+
+  var task_actions = {
+      PAUSE: ['scheduled','running','fail','retry'],
+      UNPAUSE: ['paused'],
+      SKIP: ['scheduled','running','fail','retry','paused'],
+      RETRY: ['success','skip'],
+      RETRY_TREE: ['success', 'skip'],
   };
 
+  function update_sidebar_and_actions(){
+    if( ! $_.utils.size(globals.selection) ){
+      $('#sidebar').empty();
+      $('#actions').hide();
+    }else{
+      var statuses = {};
+      for ( var key in globals.selection) {
+        if (globals.selection.hasOwnProperty(key)){
+          var task = globals.tasks[key];
+          var task_status = globals.bimapTaskStatus.key(task.task_status);
+          if( ! statuses[task_status] ){
+            statuses[task_status] = [];
+          }
+          statuses[task_status].push(task);
+        }
+      }
+      $('#sidebar').html('<div id="selected_tasks"> Selected:<dl></dl></div>');
+      for ( var s in statuses) {
+        $('#selected_tasks dl').append('<dt>'+s+'</dt><dd>'
+            +$_.utils.join(statuses[s],',',function(t){
+              return t.task_name+'('+t.task_id+')'; })+'</dd>');
+      }
+      var form = $('#actions div form').empty();
+      for( var act in task_actions ){
+        var disabled = '';
+        for ( var s in statuses) {
+          if(task_actions[act].indexOf(s)===-1){
+            disabled = ' disabled';
+            break;
+          }
+        }
+        form.append(' <button type="submit" class="btn'+disabled+'" id="'+act+'">'+act+'</button>');
+      }
+      $('#actions').show();
+    }
+  }
+  
+
+  $(document).on('change','.task_select', function(){
+    if( this.checked ) {
+      globals.selection[this.value] = true;
+    }else{
+      delete globals.selection[this.value];
+    }
+    update_sidebar_and_actions();
+  });
+
+  
   var History = window.History;
   $(document).on('click', '.history_nav', function(e) {
       var urlPath = $(this).attr('href');
@@ -12,6 +75,44 @@ $(function() {
       return false; // prevents default click action of <a ...>
   });
   
+  var render = 'wait';
+  function rr(){return globals.renderers[render];}
+  function updateContent(State) {
+    var prevScreen = render;
+    var state = $_.utils.splitUrlPath(State.hash);
+    delete state.variables['_suid'];
+    if ( state.path.length  < 2 || !state.path[1]){
+      state = $_.utils.splitUrlPath('/events/');
+    }
+    var key = state.path[1] ;
+    if(globals.renderers[key]){
+      render = key;
+    }
+    if( !globals.data_is_ready() ){
+      render = 'wait';
+    }
+    rr().state=state;
+    if( prevScreen != render ) {
+      rr().init();  
+    }
+    rr().refresh();
+  };
+
+  History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);
+  
+  $('#submit').click(function(event){
+    var u = '/events/'+globals.interval.type.value + globals.interval.time.value;
+    if( globals.event_types.value !== '*'){
+      u+='e'+globals.event_types.value;
+    }
+    var search = $('#search').val();
+    if( search !== '' ){
+      u+='?q='+encodeURI(search);
+    }
+    History.pushState({time: new Date()}, null, u);
+    return false;
+  });
+
   function history_nav(href,text){
     return '<a href="/'+href+'" class="history_nav">'+text+'</a>';
   }
@@ -22,62 +123,86 @@ $(function() {
     }
   }
 
-  var renderers = {
-      events: {
+  function none(){return '';};
+  
+  function checkbox(v){ return '<input type="checkbox" class="task_select" value="'+v+'" '+ (globals.selection[v] ? 'checked' : '') +'/>'; }
+
+  function update_navbar(event,task,run){
+    if(!event){
+      $('#query_dropdowns').show();
+      $('#crumbs').hide();
+    }else{
+      $('#query_dropdowns').hide();
+      $('#crumbs').show();
+      $('#query_li').show().removeClass('active');
+      $('#query_li a').attr('href', globals.renderers['events'].state.toString());
+      $('#type_li').show().removeClass('active');
+      $('#type_li a').attr('href', '/events/'+globals.interval.type.value + globals.interval.time.value +"T" + event.event_type_id).text(event.event_name);
+      $('#event_li').show();
+      var i = event.event_string.indexOf(',');
+      $('#event_li a').text(i >=0 ? event.event_string.substr(i+1) : '---' ).attr('href', '/event/'+event.event_id);
+      if ( !task ){
+        $('#event_li').addClass('active');
+        $('#task_li').hide();
+        $('#run_li').hide();
+      }else{
+        $('#event_li').removeClass('active');
+        $('#task_li').show().addClass('active');
+        $('#task_li a').text('#'+task.task_name);
+        if( !run ){
+          $('#run_li').hide();
+          $('#task_li').addClass('active');
+        }else{
+          $('#task_li').removeClass('active');
+          $('#run_li').show().addClass('active');;
+        }
+        
+      }
+      
+      
+    }
+    
+    
+  }
+  globals.renderers = {
+      wait: {
         init: function() {
+          update_navbar();
+          this.data_container = d3.select("#data_container");
+          this.data_container.html('<span class="glyphicon glyphicon-time"></span> Please Wait....');
+        },
+        refresh: function(){
+          updateContent(History.getState());
+        }
+      },
+      events: {
+        state: $_.utils.splitUrlPath("/events/z1"),
+        init: function() {
+          update_navbar();
           this.data_container = d3.select("#data_container");
           this.data_container.html('');
           this.table = this.data_container.append("table").attr('class', 'gridtable');
           this.thead = this.table.append("thead");
           this.thead_tr = this.thead.append("tr");
-          var column_names = [ '', 'id', 'name', 
-                               'scheduled', 'status', 'run_count',
-                               'updated', 'depend_on' ];
-  
+          var column_names = [ '', 'id', 'name',  'scheduled', 'status', 'run_count', 'updated', 'depend_on' ];
 
           var ths = this.thead_tr.selectAll("th").data(column_names);
           ths.enter().append("th").text(function(column) {
             return column;
           });
           ths.exit().remove();
-
-
-        },
-        dispatch: function(json) {
-          if (json.get_event_tasks) {
-            globals.events = {}
-            globals.tasks = {}
-            json.get_event_tasks.forEach(function(ev) {
-              globals.events[ev.event_id] = ev;
-              ev.tasks.forEach(function(t) {
-                globals.tasks[t.event_task_id] = t;
-              })
-            });
-            for ( var key in globals.selection) {
-              if (globals.selection.hasOwnProperty(key)
-                  && !globals.tasks.hasOwnProperty(key)) {
-                delete globals.selection[key];
-              }
-            }
-            globals.get_event_tasks = json.get_event_tasks;
-            this.data =  json.get_event_tasks;
-            this.refresh();
-            return true;
-          }
         },
         refresh: function() {
-          if( !this.data ) return;
-          console.log(this.data.length);
-          function none(){return '';};
-          function checkbox(v){ return '<input type="checkbox" class="task_select" value="'+v+'" />'; }
+          if( !globals.get_event_tasks  ) return;
+          if( !this.table ) this.init();
           
           var event_group_header = function(d) {
             return [ 
-                    $_.TCell(d, 'event_id', 1 , none),
+                $_.TCell(d, 'event_id', 1 , none),
                 $_.TCell(d, 'event_id', 1 , a('event')),
                 $_.TCell(d, 'event_string', 1),
                 $_.TCell(d, 'scheduled_dt', 1, $_.utils.relativeDateString),
-                $_.TCell(d, 'event_status', 1, globals.EventStatus.key),
+                $_.TCell(d, 'event_status', 1, globals.bimapEventStatus.key),
                 $_.TCell(d, undefined, 1),
                 $_.TCell(d, 'updated_dt', 1, $_.utils.relativeDateString),
                 $_.TCell(d, undefined, 1) ];
@@ -85,19 +210,17 @@ $(function() {
 
           var cells_data = function(d) {
             return [ 
-                    $_.TCell(d, 'task_id', 1 , checkbox ), 
-                     $_.TCell(d, 'task_id', 1 , a('task')), 
-                     $_.TCell(d, 'task_name', 1, function(cell,d){
-                       return history_nav('events/T'+d.task_type_id, cell);
-                     }),
+                $_.TCell(d, 'task_id', 1 , checkbox ), 
+                $_.TCell(d, 'task_id', 1 , a('task')), 
+                $_.TCell(d, 'task_name', 1, function(cell,d){ return history_nav('events/T'+d.task_type_id, cell); }),
                 $_.TCell(d, 'run_at_dt', 1, $_.utils.relativeDateString),
-                $_.TCell(d, 'task_status', 1, globals.TaskStatus.key),
+                $_.TCell(d, 'task_status', 1, globals.bimapTaskStatus.key),
                 $_.TCell(d, 'run_count', 1),
                 $_.TCell(d, 'updated_dt', 1, $_.utils.relativeDateString),
                 $_.TCell(d, 'depend_on', 1) ];
           };
 
-          var tbody = this.table.selectAll("tbody").data(this.data, function(d, i) { return i + ':' + d.event_id; } );
+          var tbody = this.table.selectAll("tbody").data(globals.get_event_tasks, function(d, i) { return i + ':' + d.event_id; } );
 
           tbody.enter().append("tbody").append("tr").attr("class", "event_row")
           tbody.exit().remove();
@@ -110,30 +233,14 @@ $(function() {
           event_group_ths.html(function(d) {
             return d.content();
           });
-          // append the header row
-          
-          // create a row for each object in the data
+
           var rows = tbody.selectAll(".task_row").data(function(d) {
             return d.tasks;
           }, function(d) {
             return d.task_id;
           });
-          rows.enter().append("tr").attr("class", "task_row")
-          //.on("click", task_click);
-//            rows.style('background-color', function(t) {
-//              return globals.selection[t.task_id] ? "#ffffaa" : "#ffffff";
-//            });
+          rows.enter().append("tr").attr("class", "task_row");
           rows.exit().remove();
-
-          function task_click(t) {
-            if (globals.selection[t.task_id]) {
-              delete globals.selection[t.task_id];
-            } else {
-              globals.selection[t.task_id] = true;
-            }
-            update_event_table(globals.get_event_tasks);
-          }
-
           // create a cell in each row for each column
           var cells = rows.selectAll("td").data(cells_data);
           cells.enter().append("td");
@@ -145,123 +252,147 @@ $(function() {
       },
       event: {
         init: function() {
-            var data_container = d3.select("#data_container");
-            data_container.html('');
+          var event_id = Number(this.state.path[2]) ;
+          var event = globals.events[event_id];
+          console.log(event);
+          update_navbar(event);
+          var data_container = d3.select("#data_container");
+          data_container.html('');
         },
-        dispatch: function() {},
         refresh: function() {}
       },
       task: {
         init: function() {
+          var task_id = Number(this.state.path[2]) ;
+          var task = globals.tasks[task_id];
+          var event = globals.events[task.event_id];
+          console.log(event,task);
+          update_navbar(event,task);
           var data_container = d3.select("#data_container");
           data_container.html('');
         },
-        dispatch: function() {},
         refresh: function() {}
       },
-      log: {
+      run: {
         init: function() {
+          var task_id = Number(this.state.path[2]) ;
+          var run_num = this.state.path[3] ;
+          var task = globals.tasks[task_id];
+          var event = globals.events[task.event_id];
+          console.log(event,task);
+          update_navbar(event,task);
           var data_container = d3.select("#data_container");
           data_container.html('');
         },
-        dispatch: function() {},
         refresh: function() {}
       }
   };
   
-  var render = 'events';
-  var state ;
   
-  function rr(){return renderers[render];}
+  function refresh_dropdowns() {
+    
+    globals.bimapEventStatus = $_.utils.BiMap(globals.meta.EventStatus);
+    globals.bimapTaskStatus = $_.utils.BiMap(globals.meta.TaskStatus);
+    globals.bimapEventTypes = $_.utils.BiMap(globals.meta.EventTypes);
+    
+    globals.event_types = { 
+      value : '*',
+      choices : globals.meta.EventTypes
+    };
+    globals.interval={
+        type: { 
+          value : 'z' ,
+            choices :  globals.meta.TimeVars 
+        },
+            time: { 
+              value : 1,
+              choices : { 
+                1: '1 day ago',
+                2: '2 days ago',
+                3: '3 days ago',
+                7: '1 week ago',
+                31: '1 month ago' }
+            }
+    };
+    
+    function update_dropdown(id,data,prefix){
+      prefix = prefix || '';
+      $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+      var ddm =$('#'+id+' .dropdown-menu');
+      ddm.empty();
+      for (var key in data.choices) {
+        if (data.choices.hasOwnProperty(key)) {
+          ddm.append( '<li><a href="#" data-value="'+key+'">'+data.choices[key]+'</a></li>' );
+        }
+      }
+      $('#'+id+' .dropdown-menu li a').click(function(event){
+        data.value=event.target.attributes["data-value"].value;
+        $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+            $(this).closest(".dropdown-menu").prev().dropdown("toggle");
+        return false; 
+      });
+      
+    }
+    update_dropdown('interval-type',globals.interval.type);
+    update_dropdown('interval-time',globals.interval.time);
+    update_dropdown('event-type',globals.event_types,'Events: ');
+    update_sidebar_and_actions();
+  }
   
-  var updateContent = function(State) {
-    state = $_.utils.splitUrlPath(State.hash)
-    var key = state.path.length > 1 ? state.path[1] : 'events' ;
-    console.log(JSON.stringify(state));
-    if(renderers[key]){
+  function process_content(json) {
+    var refresh = false;
+    if (json.get_event_tasks) {
+      globals.events = {}
+      globals.tasks = {}
+      json.get_event_tasks.forEach(function(ev) {
+        globals.events[ev.event_id] = ev;
+        ev.tasks.forEach(function(t) {
+          globals.tasks[t.task_id] = t;
+        })
+      });
+      for ( var key in globals.selection) {
+        if (globals.selection.hasOwnProperty(key)
+            && !globals.tasks.hasOwnProperty(key)) {
+          delete globals.selection[key];
+        }
+      }
+      globals.get_event_tasks = json.get_event_tasks;
+      refresh = true;
+    }
+    if (json.meta) {
+      globals.meta = json.meta;
+      refresh_dropdowns();
+    }
+    return refresh;
+  }
+
+  var render = 'wait';
+  function rr(){return globals.renderers[render];}
+  function updateContent(State) {
+    var prevScreen = render;
+    var state = $_.utils.splitUrlPath(State.hash);
+    delete state.variables['_suid'];
+    if ( state.path.length  < 2 || !state.path[1]){
+      state = $_.utils.splitUrlPath('/events/');
+    }
+    var key = state.path[1] ;
+    if(globals.renderers[key]){
       render = key;
-      rr().init();
+    }
+    if( !globals.data_is_ready() ){
+      render = 'wait';
+    }
+    rr().state=state;
+    if( prevScreen != render ) {
+      rr().init();  
     }
     rr().refresh();
   };
   
-  function process_known_content(json) {
-    if(rr().dispatch(json)){
-      return true;
-    }
-    
-    if (json.meta) {
-      globals.meta = json.meta;
-      globals.EventStatus = $_.utils.BiMap(globals.meta.EventStatus);
-      globals.TaskStatus = $_.utils.BiMap(globals.meta.TaskStatus);
-      globals.event_types = { 
-    	  value : '*',
-    	  choices : globals.meta.EventTypes
-      };
-      globals.interval={
-    		  type: { 
-    			  value : 'z' ,
-    		      choices :  globals.meta.TimeVars 
-    		  },
-              time: { 
-            	  value : 1,
-            	  choices : { 
-            		  1: '1 day ago',
-            		  2: '2 days ago',
-            		  3: '3 days ago',
-            		  7: '1 week ago',
-            		  31: '1 month ago' }
-              }
-      };
-      
-      function update_dropdown(id,data,prefix){
-    	  prefix = prefix || '';
-    	  $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
-    	  var ddm =$('#'+id+' .dropdown-menu');
-    	  ddm.empty();
-    	  for (var key in data.choices) {
-			  if (data.choices.hasOwnProperty(key)) {
-			    ddm.append( '<li><a href="#" data-value="'+key+'">'+data.choices[key]+'</a></li>' );
-			  }
-		  }
-    	  $('#'+id+' .dropdown-menu li a').click(function(event){
-    		  data.value=event.target.attributes["data-value"].value;
-    		  $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
-              $(this).closest(".dropdown-menu").prev().dropdown("toggle");
-    		  return false; 
-    	  });
-    	  
-      }
-      update_dropdown('interval-type',globals.interval.type);
-      update_dropdown('interval-time',globals.interval.time);
-      update_dropdown('event-type',globals.event_types,'Events: ');
-      
-      return true;
-    }
-    return false;
-  }
-  
-  
-
-  // Content update and back/forward button handler
   History.Adapter.bind(window, 'statechange', function() {
       updateContent(History.getState());
   }); 
-  State = History.getState();
-  History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);
-
-  $('#submit').click(function(event){
-	  var u = '/events/'+globals.interval.type.value + globals.interval.time.value;
-	  if( globals.event_types.value !== '*'){
-		  u+='e'+globals.event_types.value;
-	  }
-	  var search = $('#search').val();
-	  if( search !== '' ){
-		  u+='?q='+encodeURI(search);
-	  }
-	  History.pushState({time: new Date()}, null, u);
-	  return false;
-  });
+  
   
 
   function connect(){
@@ -282,10 +413,8 @@ $(function() {
       }, 1000)
   
       var json = JSON.parse(ev.data)
-  
-      if (!process_known_content(json)) {
-        // content is unknown just output json
-        // visualize(json)
+      if ( process_content(json) ){
+        rr().refresh();
       }
     };
     
@@ -305,7 +434,7 @@ $(function() {
   setInterval(function() {
     if( ws.dead ){
       ws = connect();
-    }else if (globals.get_event_tasks)
+    }else if ( globals.data_is_ready() )
       rr().refresh();
-  }, 1000 * 60);
+  }, 1000 * 30);
 });

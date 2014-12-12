@@ -4,6 +4,14 @@
 	top:20px;
 }
 
+body {
+	padding: 60px 0 60px 0;
+}
+
+#sidebar {
+	padding: 60px 0 60px 0;
+}
+
 table.gridtable {
 	font-family: verdana,arial,sans-serif;
 	font-size:11px;

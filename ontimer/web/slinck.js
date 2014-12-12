@@ -121,7 +121,21 @@
     function splitUrlPath (urlpath) {
       var path = urlpath.split("/");
       var last = path[path.length-1].split('?');
-      var result = { path: path , variables: {}};
+      var result = { 
+          path: path , 
+          variables: {},
+          toString: function(){ 
+            var vars = '' ;
+            var sep = '?' ;
+            for ( var k in this.variables) {
+              if (this.variables.hasOwnProperty(k)) {
+                vars += sep + k + '=' + encodeURI(this.variables[k]);
+                sep = '&';
+              }
+            }
+            return this.path.join('/') + vars;
+          }
+      };
       if( last.length == 2 ){
         path[path.length-1] = last[0];
         last[1].split("&").forEach(function(part) {
@@ -130,9 +144,12 @@
             result.variables[item[0]] = decodeURIComponent(item[1]);
           }
         });
+      }else if(last.length > 2){
+        throw 'Unexpected number of "?" in url :' + urlpath ;
       }
       return result;
     }
+
     
     function convertFunctionsToObject(funcList) {
       return convertListToObject(funcList, combineKeyExtractors(getPropertyExtractor("name"), extractFunctionName));
