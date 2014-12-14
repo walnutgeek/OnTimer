@@ -2,12 +2,18 @@ ToDo
 ----
 
 ##Now
-  * run link from event s
-  * implement log subscription
+  * refactor server side
+    * to process actions 
+    * to implement log subscription 
+    * to pull info on events from outside query
+  * send task actions
   * run screen
-  * imple
+  * mvp deployment 
+  * documentation
+  * bitstar and pypy
   * event screen
   * task screen
+  * generator screen
    
 ##Later 
   * documentation
@@ -29,6 +35,7 @@ ToDo
     * hover over depend_on shows arrows
 
 ##Done
+  * runs link from event query
   * query screen
     * selected tasks sidebar
     * automatic action bar

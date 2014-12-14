@@ -36,38 +36,49 @@
 						<li class="active" id="query_li"><a href="#">Query</a></li>
 						<li id="type_li"><a class="history_nav" href="#">?</a></li>
 						<li id="event_li"><a class="history_nav" href="#">?</a></li>
-						<li id="task_li"><a class="history_nav" href="#">#?</a></li>
-						<li id="run_li"><a class="history_nav" href="#">?</a></li>
+						<li id="task_li"><a class="history_nav" href="#">?</a></li>
+						<li class="dropdown" id="run_li">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"> 
+			 					<span class="last-selected">?</span> <span class="caret"></span>
+						  	</a>
+							<ul class="dropdown-menu" role="menu">
+								<li><a href="#">?</a></li>
+								<li><a href="#">??</a></li>
+							</ul>
+						</li>
 					</ul>
-
 
 					<ul class="nav navbar-nav" id="query_dropdowns"">
 						<li class="active" id="query_li"><a href="#">Query</a></li>
 						<li class="dropdown" id="interval-type">
-						  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"> 
-						  	<span class="last-selected">?</span> <span class="caret"></span></a>
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"> 
+			 					<span class="last-selected">?</span> <span class="caret"></span>
+						  	</a>
 							<ul class="dropdown-menu" role="menu">
 								<li><a href="#">?</a></li>
 								<li><a href="#">??</a></li>
-							</ul></li>
-						<li class="dropdown" id="interval-time"><a href="#"
-							class="dropdown-toggle" data-toggle="dropdown" role="button"
-							aria-expanded="false"> <span class="last-selected">?</span> <span
-								class="caret"></span></a>
+							</ul>
+						</li>
+						<li class="dropdown" id="interval-time">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"> 
+			 					<span class="last-selected">?</span> <span class="caret"></span>
+						  	</a>
 							<ul class="dropdown-menu" role="menu">
 								<li><a href="#">?</a></li>
 								<li><a href="#">??</a></li>
-							</ul></li>
-						<li class="dropdown" id='event-type'><a href="#"
-							class="dropdown-toggle" data-toggle="dropdown" role="button"
-							aria-expanded="false"> <span class="last-selected">Event:
-									?</span> <span class="caret"></span></a>
+							</ul>
+						</li>
+						<li class="dropdown" id='event-type'>
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"> 
+			 					<span class="last-selected">?</span> <span class="caret"></span>
+						  	</a>
 							<ul class="dropdown-menu" role="menu">
-								<li><a href="#">-All-</a></li>
 								<li><a href="#">?</a></li>
 								<li><a href="#">??</a></li>
-							</ul></li>
+							</ul>
+						</li>
 					</ul>
+
 					<form class="navbar-form navbar-right" role="search">
 						<div class="form-group">
 							<input type="text" class="form-control" id='search'

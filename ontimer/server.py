@@ -249,7 +249,7 @@ def run_server(_dao,address="",port=9753):
         (r'/', IndexHandler),
         (r'/event.*', IndexHandler),
         (r'/task/.*', IndexHandler),
-        (r'/log/.*', IndexHandler),
+        (r'/run/.*', IndexHandler),
         (r'/ws', SocketHandler),
         (r'/api', ApiHandler),
         (r"/(.*)", FileHandler,  {"path": webpath})

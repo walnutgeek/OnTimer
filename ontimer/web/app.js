@@ -19,6 +19,25 @@ $(function() {
       RETRY_TREE: ['success', 'skip'],
   };
 
+  function update_dropdown(id,data,prefix){
+    prefix = prefix || '';
+    $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+    var ddm =$('#'+id+' .dropdown-menu');
+    ddm.empty();
+    for (var key in data.choices) {
+      if (data.choices.hasOwnProperty(key)) {
+        ddm.append( '<li><a href="#" data-value="'+key+'">'+data.choices[key]+'</a></li>' );
+      }
+    }
+    $('#'+id+' .dropdown-menu li a').click(function(event){
+      data.value=event.target.attributes["data-value"].value;
+      $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+          $(this).closest(".dropdown-menu").prev().dropdown("toggle");
+      return false; 
+    });
+    
+  }
+
   function update_sidebar_and_actions(){
     if( ! $_.utils.size(globals.selection) ){
       $('#sidebar').empty();
@@ -57,7 +76,7 @@ $(function() {
   }
   
 
-  $(document).on('change','.task_select', function(){
+  $(document).on('change', '.task_select', function(){
     if( this.checked ) {
       globals.selection[this.value] = true;
     }else{
@@ -66,6 +85,32 @@ $(function() {
     update_sidebar_and_actions();
   });
 
+  var currScreen = 'wait';
+  
+  function rr(){return globals.renderers[currScreen];}
+  
+  function updateContent(State) {
+    var prevScreen = currScreen;
+    var state = $_.utils.splitUrlPath(State.hash);
+    delete state.variables['_suid'];
+    if ( state.path.length  < 2 || !state.path[1]){
+      state = $_.utils.splitUrlPath('/events/');
+    }
+    var key = state.path[1] ;
+    if(globals.renderers[key]){
+      currScreen = key;
+    }
+    if( !globals.data_is_ready() ){
+      currScreen = 'wait';
+    }
+    rr().state=state;
+    if( prevScreen != currScreen ) {
+      rr().init();  
+    }
+    if( currScreen !== 'wait' ){
+      rr().refresh();
+    }
+  };
   
   var History = window.History;
   $(document).on('click', '.history_nav', function(e) {
@@ -74,31 +119,11 @@ $(function() {
       History.pushState({time: new Date()}, null, urlPath);
       return false; // prevents default click action of <a ...>
   });
-  
-  var render = 'wait';
-  function rr(){return globals.renderers[render];}
-  function updateContent(State) {
-    var prevScreen = render;
-    var state = $_.utils.splitUrlPath(State.hash);
-    delete state.variables['_suid'];
-    if ( state.path.length  < 2 || !state.path[1]){
-      state = $_.utils.splitUrlPath('/events/');
-    }
-    var key = state.path[1] ;
-    if(globals.renderers[key]){
-      render = key;
-    }
-    if( !globals.data_is_ready() ){
-      render = 'wait';
-    }
-    rr().state=state;
-    if( prevScreen != render ) {
-      rr().init();  
-    }
-    rr().refresh();
-  };
+  History.Adapter.bind(window, 'statechange', function() {
+    updateContent(History.getState());
+  }); 
 
-  History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);
+
   
   $('#submit').click(function(event){
     var u = '/events/'+globals.interval.type.value + globals.interval.time.value;
@@ -148,22 +173,23 @@ $(function() {
       }else{
         $('#event_li').removeClass('active');
         $('#task_li').show().addClass('active');
-        $('#task_li a').text('#'+task.task_name);
+        $('#task_li a').text(task.task_name);
         if( !run ){
           $('#run_li').hide();
           $('#task_li').addClass('active');
         }else{
           $('#task_li').removeClass('active');
           $('#run_li').show().addClass('active');;
+          data = { value : run.run, choices : {}}
+          for (i = 1; i <= task.run_count; i++) { 
+            data.choices[i]='#'+i;
+          }
+          update_dropdown('run_li',data);
         }
-        
       }
-      
-      
     }
-    
-    
   }
+  
   globals.renderers = {
       wait: {
         init: function() {
@@ -215,7 +241,7 @@ $(function() {
                 $_.TCell(d, 'task_name', 1, function(cell,d){ return history_nav('events/T'+d.task_type_id, cell); }),
                 $_.TCell(d, 'run_at_dt', 1, $_.utils.relativeDateString),
                 $_.TCell(d, 'task_status', 1, globals.bimapTaskStatus.key),
-                $_.TCell(d, 'run_count', 1),
+                $_.TCell(d, 'run_count', 1, function(cell,d){ return history_nav('run/'+d.task_id +'/'+cell, cell); }),
                 $_.TCell(d, 'updated_dt', 1, $_.utils.relativeDateString),
                 $_.TCell(d, 'depend_on', 1) ];
           };
@@ -228,7 +254,7 @@ $(function() {
           var event_group_ths = tbody.select(".event_row").selectAll("th").data(
               event_group_header);
           event_group_ths.enter().append('th').attr('colspan', function(d) {
-            return d.colspan
+            return d.colspan;
           });
           event_group_ths.html(function(d) {
             return d.content();
@@ -280,7 +306,7 @@ $(function() {
           var task = globals.tasks[task_id];
           var event = globals.events[task.event_id];
           console.log(event,task);
-          update_navbar(event,task);
+          update_navbar(event,task,{run: Number(run_num)});
           var data_container = d3.select("#data_container");
           data_container.html('');
         },
@@ -315,24 +341,6 @@ $(function() {
             }
     };
     
-    function update_dropdown(id,data,prefix){
-      prefix = prefix || '';
-      $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
-      var ddm =$('#'+id+' .dropdown-menu');
-      ddm.empty();
-      for (var key in data.choices) {
-        if (data.choices.hasOwnProperty(key)) {
-          ddm.append( '<li><a href="#" data-value="'+key+'">'+data.choices[key]+'</a></li>' );
-        }
-      }
-      $('#'+id+' .dropdown-menu li a').click(function(event){
-        data.value=event.target.attributes["data-value"].value;
-        $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
-            $(this).closest(".dropdown-menu").prev().dropdown("toggle");
-        return false; 
-      });
-      
-    }
     update_dropdown('interval-type',globals.interval.type);
     update_dropdown('interval-time',globals.interval.time);
     update_dropdown('event-type',globals.event_types,'Events: ');
@@ -366,32 +374,8 @@ $(function() {
     return refresh;
   }
 
-  var render = 'wait';
-  function rr(){return globals.renderers[render];}
-  function updateContent(State) {
-    var prevScreen = render;
-    var state = $_.utils.splitUrlPath(State.hash);
-    delete state.variables['_suid'];
-    if ( state.path.length  < 2 || !state.path[1]){
-      state = $_.utils.splitUrlPath('/events/');
-    }
-    var key = state.path[1] ;
-    if(globals.renderers[key]){
-      render = key;
-    }
-    if( !globals.data_is_ready() ){
-      render = 'wait';
-    }
-    rr().state=state;
-    if( prevScreen != render ) {
-      rr().init();  
-    }
-    rr().refresh();
-  };
+
   
-  History.Adapter.bind(window, 'statechange', function() {
-      updateContent(History.getState());
-  }); 
   
   
 
@@ -437,4 +421,6 @@ $(function() {
     }else if ( globals.data_is_ready() )
       rr().refresh();
   }, 1000 * 30);
+  
+  History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);
 });
