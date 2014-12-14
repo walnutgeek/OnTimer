@@ -179,6 +179,7 @@ $(function() {
           $('#task_li').addClass('active');
         }else{
           $('#task_li').removeClass('active');
+          $('#task_li a').attr('href', '/task/'+task.task_id);
           $('#run_li').show().addClass('active');;
           data = { value : run.run, choices : {}}
           for (i = 1; i <= task.run_count; i++) { 

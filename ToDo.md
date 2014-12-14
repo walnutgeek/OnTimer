@@ -2,10 +2,28 @@ ToDo
 ----
 
 ##Now
-  * refactor server side
-    * to process actions 
-    * to implement log subscription 
-    * to pull info on events from outside query
+  * refactor dropdowns: remove click and navigate to url
+    * events url should be: /events/z/31/*
+    * dropdowns should dynamically change url
+  * Client-Server Protocol 
+    * Client can have  N subscriptions from server
+      * MVP will have 1 or 2 subscriptions:
+        * events subscription (always on)
+          { action : 'subscribe'
+            source : 'events'
+            args: { interval-type : 'z' ,
+                    interval-time : '31' ,
+                    event-type : '*' } 
+          }
+        * log subscription (only when run screen is open and displaying live run)
+    * Client can request data from server:
+      * odd event (event ouside of subscription)
+        * { action: 'get', source: 'event', args: { event_id: 35 } }
+        * { action: 'get', source: 'event', args: { task_id: 3 } }
+      * search query (not a priority for MVP, ignore it for now just keep in mind more types of requests)
+        * { action: 'get', source: 'search', args: { q: 'djfl djfld dlfj' } }
+    * Client can request action from server
+      * { action: 'change', source: 'tasks', args: { task_id: [ 383, 385, 387 ] } }
   * send task actions
   * run screen
   * mvp deployment 
@@ -17,6 +35,7 @@ ToDo
    
 ##Later 
   * documentation
+    * extract CliServProtocol from todo list into documentation 
     * home page and quick start 
     * convert docs MD into rst
 	  * pandoc ?
@@ -35,6 +54,10 @@ ToDo
     * hover over depend_on shows arrows
 
 ##Done
+  * design client server protocol able to:
+    * to process actions 
+    * to implement log subscription 
+    * to pull info on events from outside query
   * runs link from event query
   * query screen
     * selected tasks sidebar
