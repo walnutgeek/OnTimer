@@ -122,6 +122,35 @@ class KeyCmpMixin(object):
     def __ge__(self, other):
         return not (self < other)
 
+def safe_append(obj,key,val_to_append):
+    '''
+    ensure that if ``list`` created in dictionary and append value to it
+    
+    >>> x={}
+    >>> safe_append(x,'a',5)
+    >>> x
+    {'a': [5]}
+    >>> safe_append(x,'a',7)
+    >>> x
+    {'a': [5, 7]}
+    >>> safe_append(x,'u',2)
+    >>> x
+    {'a': [5, 7], 'u': [2]}
+    >>> 
+    
+    '''
+    if key in obj:
+        obj[key].append(val_to_append)
+    else:
+        obj[key]=[val_to_append]
+ 
+def flatten_links(objects,direction,key):
+    '''
+    
+    
+    '''
+    pass
+
 def broadcast(it, *args, **kwargs):
     ''' 
     call every element of collection ``it``

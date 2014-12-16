@@ -29,12 +29,15 @@ $(function() {
         ddm.append( '<li><a href="#" data-value="'+key+'">'+data.choices[key]+'</a></li>' );
       }
     }
-    $('#'+id+' .dropdown-menu li a').click(function(event){
-      data.value=event.target.attributes["data-value"].value;
-      $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
-          $(this).closest(".dropdown-menu").prev().dropdown("toggle");
-      return false; 
-    });
+      $('#'+id+' .dropdown-menu li a').click(function(event){
+        data.value=event.target.attributes["data-value"].value;
+        $('#'+id+' .last-selected').text(prefix+data.choices[data.value]);
+        $(this).closest(".dropdown-menu").prev().dropdown("toggle");
+        if( data.url_action ){
+          History.pushState(null, null, data.url_action(data.value));
+        }
+        return false; 
+      });
     
   }
 
@@ -75,6 +78,14 @@ $(function() {
     }
   }
   
+  $(document).on('click', '#actions div form button', function(e) {
+    var msg = JSON.stringify({ action: 'change', source: 'tasks', 'args': { apply: this.id , task_id: Object.keys(globals.selection) } });
+    ws.send(msg);
+    $('.task_select').attr('checked', false);
+    globals.selection = {};
+    update_sidebar_and_actions();
+    return false; 
+  });
 
   $(document).on('change', '.task_select', function(){
     if( this.checked ) {
@@ -104,6 +115,7 @@ $(function() {
       currScreen = 'wait';
     }
     rr().state=state;
+    console.log('updateContent:' + state.toString());
     if( prevScreen != currScreen ) {
       rr().init();  
     }
@@ -126,10 +138,7 @@ $(function() {
 
   
   $('#submit').click(function(event){
-    var u = '/events/'+globals.interval.type.value + globals.interval.time.value;
-    if( globals.event_types.value !== '*'){
-      u+='e'+globals.event_types.value;
-    }
+    var u = events_url();
     var search = $('#search').val();
     if( search !== '' ){
       u+='?q='+encodeURI(search);
@@ -181,7 +190,7 @@ $(function() {
           $('#task_li').removeClass('active');
           $('#task_li a').attr('href', '/task/'+task.task_id);
           $('#run_li').show().addClass('active');;
-          data = { value : run.run, choices : {}}
+          data = { value : run.run, choices : {}, url_action: function(){ return '/run/'+ task.task_id+'/'+this.value;} };
           for (i = 1; i <= task.run_count; i++) { 
             data.choices[i]='#'+i;
           }
@@ -242,7 +251,7 @@ $(function() {
                 $_.TCell(d, 'task_name', 1, function(cell,d){ return history_nav('events/T'+d.task_type_id, cell); }),
                 $_.TCell(d, 'run_at_dt', 1, $_.utils.relativeDateString),
                 $_.TCell(d, 'task_status', 1, globals.bimapTaskStatus.key),
-                $_.TCell(d, 'run_count', 1, function(cell,d){ return history_nav('run/'+d.task_id +'/'+cell, cell); }),
+                $_.TCell(d, 'run_count', 1, function(cell,d){ return cell == 0 ? cell : history_nav('run/'+d.task_id +'/'+cell, cell); }),
                 $_.TCell(d, 'updated_dt', 1, $_.utils.relativeDateString),
                 $_.TCell(d, 'depend_on', 1) ];
           };
@@ -315,6 +324,9 @@ $(function() {
       }
   };
   
+  function events_url(i){
+    return '/events/' +  [globals.interval.type.value ,  globals.interval.time.value , globals.event_types.value].join('/');
+  }
   
   function refresh_dropdowns() {
     
@@ -323,23 +335,26 @@ $(function() {
     globals.bimapEventTypes = $_.utils.BiMap(globals.meta.EventTypes);
     
     globals.event_types = { 
+      url_action: events_url,
       value : '*',
       choices : globals.meta.EventTypes
     };
     globals.interval={
         type: { 
+          url_action: events_url,
           value : 'z' ,
-            choices :  globals.meta.TimeVars 
+          choices :  globals.meta.TimeVars 
         },
-            time: { 
-              value : 1,
-              choices : { 
-                1: '1 day ago',
-                2: '2 days ago',
-                3: '3 days ago',
-                7: '1 week ago',
-                31: '1 month ago' }
-            }
+        time: { 
+          url_action: events_url, 
+          value : 1,
+          choices : { 
+            1: '1 day ago',
+            2: '2 days ago',
+            3: '3 days ago',
+            7: '1 week ago',
+            31: '1 month ago' }
+        }
     };
     
     update_dropdown('interval-type',globals.interval.type);

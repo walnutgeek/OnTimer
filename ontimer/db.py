@@ -160,31 +160,38 @@ class Dao:
         r = list(cursor.execute(q,params) if params else cursor.execute(q))
         return r
 
-    @_conn_decorator
-    def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
-        cutoff = cutoff or  utils.utc_adjusted(hours=-72) 
-        where = 'and (event.updated_dt > ? or event.scheduled_dt > ?) ' 
+
+    def _get_event_tasks_where(self, where, args, cursor, conn):
         query ="select %s from %s where %s and %s %s order by %s" % (
             _selectors(_EVENTTYPE, _EVENT, _TASK, _TASKTYPE),
             _froms(_EVENTTYPE, _EVENT, _TASK, _TASKTYPE),
             _joins(_EVENTTYPE, _EVENT, _TASK), _joins(_TASKTYPE, _TASK), where, 
             'event.scheduled_dt DESC, event.event_id, task.task_id')
-        cursor.execute(query,(cutoff,cutoff))
+        cursor.execute(query,args)
         events = _fetch_tree(cursor,((_TASK[_PK],'tasks'),) )
         tasks = [ t for e in events for t in e['tasks'] ]
         alltasks = { task[_TASK[_PK]] : task for task in tasks }
         dep_q = _simple_join((_EVENT, _TASK, _PREREQ), 
                              'task_prereq.before_task_id, task_prereq.task_id' , 
                              where = where + ' order by 1, 2')
-        dependenies = cursor.execute(dep_q,(cutoff,cutoff))
+        dependenies = cursor.execute(dep_q,args)
         for d in dependenies:
-            task=alltasks[d[1]]
-            if 'depend_on' in task:
-                task['depend_on'].append(d[0])
-            else:
-                task['depend_on'] = [d[0]]
+            utils.safe_append(alltasks[d[1]],'depend_on',d[0])
+            utils.safe_append(alltasks[d[0]],'dependents',d[1])
         return events, alltasks
 
+    @_conn_decorator
+    def get_event_tasks(self, cutoff = None, cursor = None, conn=None):
+        where = 'and (event.updated_dt > :cutoff or event.scheduled_dt > :cutoff) ' 
+        args = dict(cutoff = cutoff or  utils.utc_adjusted(hours=-72))
+        return self._get_event_tasks_where(where,args,cursor,conn) 
+
+    @_conn_decorator
+    def get_event_tasks_by_taskid(self, taskid, cursor=None, conn=None):
+        joined = (','.join(str(s) for s in taskid) if hasattr(taskid,'__iter__') else str(taskid) )
+        where = 'and event.event_id in (select distinct et.event_id from task et  where et.task_id  in (%s))' % joined  
+        return self._get_event_tasks_where(where,{},cursor,conn) 
+    
     @_conn_decorator
     def update_event_tasks_cache(self, cache , cutoff = None, cursor = None, conn=None):
         cutoff = cutoff or  utils.utc_adjusted(days=-31) 
@@ -256,6 +263,8 @@ class Dao:
                 g['current_event'] = None
         return generators
      
+
+        
     @_conn_decorator
     def update_task(self, task, cursor=None, conn=None):
         set_vars = _assignments([

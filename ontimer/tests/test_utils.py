@@ -161,6 +161,15 @@ def test_broadcast():
     utils.broadcast([append0,append1,append2,append3],"!")
     eq_(str(acc),"['Hello John!', 'Hello let!', 'Privet sto let!', 'Privet John!']" )
     
+def test_safe_append():
+    x={}
+    utils.safe_append(x,'a',5)
+    eq_("{'a': [5]}",str(x))
+    utils.safe_append(x,'a',7)
+    eq_("{'a': [5, 7]}",str(x))
+    utils.safe_append(x,'u',2)
+    eq_("{'a': [5, 7], 'u': [2]}",str(x))
+    
 def test_Miscellaneous():
     eq_(len(utils.platform_info()),7)
     

@@ -176,6 +176,16 @@ class State:
             #log.debug( "sending:%s" %  self.json ) 
             self.pushAll()
     
+    def dispatch(self, msg):
+        if msg['action'] == 'change' :
+            if msg['source'] == 'tasks' :
+                tasks = self.dao.load_task_by_id(msg['args']['task_id'])
+                if msg['args']['apply']=='RETRY':
+                    next_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=5)
+                    for t in tasks:
+                        t.update( _task_status = event.TaskStatus.retry, _run_at_dt = next_time)
+                        self.dao.update_task(t)
+    
     def pushAll(self):
         for client in self.clients:
             self.pushToOne(client,self.json)
@@ -212,7 +222,10 @@ class SocketHandler(websocket.WebSocketHandler):
         state.addClient(self)
     
     def on_message(self,msg):
-        pass
+        log.debug( 'on message: %r' % msg)
+        res = state.dispatch(json.loads(msg))
+        self.write_message(json.dumps({'response' : res}))
+        
     
 
     def on_close(self):
