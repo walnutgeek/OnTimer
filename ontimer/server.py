@@ -13,6 +13,7 @@ import yaml
 import functools
 import os
 import fcntl
+from sets import Set
 import sys
 
 from . import dpt
@@ -179,12 +180,27 @@ class State:
     def dispatch(self, msg):
         if msg['action'] == 'change' :
             if msg['source'] == 'tasks' :
-                tasks = self.dao.load_task_by_id(msg['args']['task_id'])
-                if msg['args']['apply']=='RETRY':
-                    next_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=5)
-                    for t in tasks:
-                        t.update( _task_status = event.TaskStatus.retry, _run_at_dt = next_time)
-                        self.dao.update_task(t)
+                task_ids = [ int(i) for i in msg['args']['task_id']]
+                apply_action = msg['args']['apply']
+                _,tasks = self.dao.get_event_tasks_by_taskid(task_ids)
+                selected_tasks = Set()
+                for task_id in task_ids :
+                    selected_tasks.add(task_id)
+                    if apply_action=='RETRY_TREE':
+                        for dependent_id in utils.flatten_links(tasks, task_id, 'dependents'):
+                            selected_tasks.add(dependent_id)
+                next_status = None
+                if apply_action in ['RETRY_TREE', 'RETRY', 'UNPAUSE' ]:
+                    next_status = event.TaskStatus.retry
+                elif apply_action == 'PAUSE':
+                    next_status = event.TaskStatus.paused
+                else:
+                    raise ValueError("Unknown 'apply' value: %r" % msg )
+                next_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=5)
+                for task_id in selected_tasks:
+                    task = tasks[task_id]
+                    task.update( _task_status = next_status, _run_at_dt = next_time)
+                    self.dao.update_task(task)
     
     def pushAll(self):
         for client in self.clients:

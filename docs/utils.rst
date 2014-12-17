@@ -22,8 +22,9 @@ Utils
   -----------------
   
   .. automethod:: ontimer.utils.quict
-
   .. automethod:: ontimer.utils.broadcast
+  .. automethod:: ontimer.utils.flatten_links
+  .. automethod:: ontimer.utils.safe_append
  
   .. autoclass:: Broadcast
      :members:

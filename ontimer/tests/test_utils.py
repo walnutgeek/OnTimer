@@ -170,6 +170,21 @@ def test_safe_append():
     utils.safe_append(x,'u',2)
     eq_("{'a': [5, 7], 'u': [2]}",str(x))
     
+def test_flatten_links():
+    x={
+       1:{'link':[2,3]},
+       2:{'link':[4,5]},
+       3:{'link':[5,7]},
+       4:{'link':[6]},
+       5:{'link':[6,7]},
+       6:{'link':[7]},
+       7:{},
+    }
+    eq_("Set([6, 7])",str(utils.flatten_links(x,4,'link')))
+    eq_("Set([2, 3, 4, 5, 6, 7])",str(utils.flatten_links(x,1,'link')))
+    eq_("Set([4, 5, 6, 7])",str(utils.flatten_links(x,2,'link')))
+    eq_("Set([])",str(utils.flatten_links(x,2,'zink')))
+    
 def test_Miscellaneous():
     eq_(len(utils.platform_info()),7)
     

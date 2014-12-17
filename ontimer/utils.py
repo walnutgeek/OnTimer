@@ -124,7 +124,8 @@ class KeyCmpMixin(object):
 
 def safe_append(obj,key,val_to_append):
     '''
-    ensure that if ``list`` created in dictionary and append value to it
+    ensure that ``list`` created in dictionary and before value append value to that list. Method useful 
+    when you have no control over dictionary creation, if you do you may be better off using ``defaultdict(list)``.
     
     >>> x={}
     >>> safe_append(x,'a',5)
@@ -137,19 +138,51 @@ def safe_append(obj,key,val_to_append):
     >>> x
     {'a': [5, 7], 'u': [2]}
     >>> 
-    
     '''
     if key in obj:
         obj[key].append(val_to_append)
     else:
         obj[key]=[val_to_append]
  
-def flatten_links(objects,direction,key):
+def flatten_links(object_dict,key, direction):
     '''
-    
-    
+    return set of keys that linked to ``key`` provided:
+      * ``object_dict`` - dictionary of objects by key
+      * ``key`` - key of the object which links needed to be inspected.
+      * ``direction`` -  is name of property inside of object that pointed to set of keys of linked objects. 
+
+    >>> x={
+    ...    1:{'link':[2,3]},
+    ...    2:{'link':[4,5]},
+    ...    3:{'link':[5,7]},
+    ...    4:{'link':[6]},
+    ...    5:{'link':[6,7]},
+    ...    6:{'link':[7]},
+    ...    7:{},
+    ... }
+    >>> flatten_links(x,4,'link')
+    Set([6, 7])
+    >>> flatten_links(x,1,'link')
+    Set([2, 3, 4, 5, 6, 7])
+    >>> flatten_links(x,2,'link')
+    Set([4, 5, 6, 7])
+    >>> flatten_links(x,2,'zink')
+    Set([])
+    >>> 
+
+  
     '''
-    pass
+    visited=Set()
+    def _object(visited,key):
+        obj = object_dict[key]
+        if direction in obj:
+            follow_keys = obj[direction]
+            for fkey in follow_keys:
+                if fkey not in visited:
+                    visited.add(fkey)
+                    _object(visited,fkey)
+    _object(visited, key)
+    return visited
 
 def broadcast(it, *args, **kwargs):
     ''' 

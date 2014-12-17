@@ -23,8 +23,6 @@ Events
   .. autoclass:: GeneratorStatus
   .. autoclass:: VarTypes
 
-  .. automethod:: ontimer.event.findEnum
-
   
   
   
