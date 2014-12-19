@@ -20,12 +20,14 @@ default_filename = '.ontimer'
 
 _TBL = 0
 _PK  = 1
-#            Table(_TBL)          PKey(_PK)
-_EVENTTYPE = 'event_type',        'event_type_id'
-_EVENT =     'event',             'event_id'
-_TASK =      'task',              'task_id'
-_PREREQ =    'task_prereq',       'prereq_id'
-_TASKTYPE =  'task_type',         'task_type_id'
+#                    Table(_TBL)          PKey(_PK)
+_EVENTTYPE =         'event_type',        'event_type_id'
+_EVENT =             'event',             'event_id'
+_TASK =              'task',              'task_id'
+_PREREQ =            'task_prereq',       'prereq_id'
+_TASKTYPE =          'task_type',         'task_type_id'
+_ARTIFACT =          'artifact',          'artifact_id'
+_ARTIFACT_SCORE =    'artifact_score',    'artifact_score_id'
 
 class ServerStatus(IntEnum):
     prepare_to_stop  =  -1      
@@ -85,6 +87,9 @@ def _froms ( *args ):
     tables_keys = _args(args)
     return ', '.join(map(lambda t:t[_TBL], tables_keys))
 
+def _join_froms ( query, l, join,r ): 
+    return '%s %s JOIN %s ON %s.%s=%s.%s' % (query,join,r[0],l[0],l[1],r[0],l[1])
+
 def _simple_join(tables_keys, selectors, where = ''):
     return 'select %s from %s where %s %s' % (selectors, _froms(tables_keys), _joins(tables_keys), where)
 
@@ -120,7 +125,7 @@ def _fetch_tree(cursor, key_attrib_pairs, query_result = None, query_columns = N
             regroup.append(group)
             children = group_by([ grp_list[j][1:] for j in range(start, end) ],keys)
             group[children_keys[0]] = children
-        for idx, rec in enumerate(grp_list):
+        for idx, _ in enumerate(grp_list):
             if last_grp_idx is None :
                 last_grp_idx = idx
             elif grp_list[idx][0] != grp_list[last_grp_idx][0]:
@@ -190,6 +195,11 @@ class Dao:
     def get_event_tasks_by_taskid(self, taskid, cursor=None, conn=None):
         joined = (','.join(str(s) for s in taskid) if hasattr(taskid,'__iter__') else str(taskid) )
         where = 'and event.event_id in (select distinct et.event_id from task et  where et.task_id  in (%s))' % joined  
+        return self._get_event_tasks_where(where,{},cursor,conn) 
+    
+    def get_event_tasks_by_eventid(self, event_id, cursor=None, conn=None):
+        joined = (','.join(str(s) for s in event_id) if hasattr(event_id,'__iter__') else str(event_id) )
+        where = 'and event.event_id in (%s)' % joined  
         return self._get_event_tasks_where(where,{},cursor,conn) 
     
     @_conn_decorator
@@ -299,7 +309,7 @@ class Dao:
         result = list(cursor.execute('''select et.* from task et 
         where et.task_id = :task_id''', task))
         if len(result)!=1:
-            raise ValueError('expect to get one instead of %d record for %r ' % (len(result),task) )
+            raise AssertionError('expect to get one instead of %d record for %r ' % (len(result),task) )
         return _fetch_all( cursor, result )[0]
         
     @_conn_decorator
@@ -314,7 +324,7 @@ class Dao:
                 VALUES ( :task_id, :run,  :name, :value, :utc_now)
                 ''', artifact)
         elif cursor.rowcount != 1:
-            raise ValueError('unexpected row count: %d storing: %r' % (cursor.rowcount, artifact))
+            raise AssertionError('unexpected row count: %d storing: %r' % (cursor.rowcount, artifact))
         conn.commit()
 
     @_conn_decorator
@@ -332,11 +342,27 @@ class Dao:
         elif len(result) == 1 :
             score.update(artifact_id = result[0][0])
         else:
-            raise ValueError('too many artifact_ids: %r for %r' % score)
+            raise AssertionError('too many artifact_ids: %r for %r' % score)
         cursor.execute('''INSERT INTO artifact_score (artifact_id, score, updated_dt) 
             VALUES (:artifact_id, :score, :utc_now );
             ''', score)
         conn.commit()
+
+    @_conn_decorator
+    def get_artifacts_for_run(self, taskid, run, cursor=None, conn=None):
+        query ="""select %s from %s where task.task_id = :task_id and artifact.run = :run 
+        order by artifact.artifact_id, artifact.stored_dt, artifact_score.updated_dt""" % (
+            _selectors(_TASK, _ARTIFACT, _ARTIFACT_SCORE),
+            _join_froms( _join_froms( _TASK[_TBL], _TASK, '', _ARTIFACT), _ARTIFACT, 'OUTER LEFT', _ARTIFACT_SCORE) )
+        print query
+        cursor.execute(query,{'task_id':taskid,'run':run})
+        task = _fetch_tree(cursor, ((_ARTIFACT[_PK], 'artifacts'), (_ARTIFACT_SCORE[_PK], 'scores')))[0]
+        artifacts_list = task['artifacts']
+        for r in artifacts_list:
+            if len(r['scores'])==1 and all(v is None for v in r['scores'][0].itervalues()) :
+                del r['scores']
+        task['artifacts']={ r['name'] : r for r in artifacts_list}
+        return  task
         
     @_conn_decorator
     def emit_event(self, event, cursor=None, conn=None):

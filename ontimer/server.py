@@ -117,6 +117,10 @@ class Run:
             return False
         return True
         
+ACTION_STATUS_MAP =  {'RETRY_TREE':event.TaskStatus.retry, 'RETRY':event.TaskStatus.retry, 
+                      'SKIP':event.TaskStatus.skip, 'PAUSE': event.TaskStatus.paused, 
+                      'UNPAUSE':event.TaskStatus.retry}
+
 class State:
     def __init__(self, dao):
         self.dao = dao
@@ -177,30 +181,25 @@ class State:
             #log.debug( "sending:%s" %  self.json ) 
             self.pushAll()
     
-    def dispatch(self, msg):
-        if msg['action'] == 'change' :
-            if msg['source'] == 'tasks' :
-                task_ids = [ int(i) for i in msg['args']['task_id']]
-                apply_action = msg['args']['apply']
-                _,tasks = self.dao.get_event_tasks_by_taskid(task_ids)
-                selected_tasks = Set()
-                for task_id in task_ids :
-                    selected_tasks.add(task_id)
-                    if apply_action=='RETRY_TREE':
-                        for dependent_id in utils.flatten_links(tasks, task_id, 'dependents'):
-                            selected_tasks.add(dependent_id)
-                next_status = None
-                if apply_action in ['RETRY_TREE', 'RETRY', 'UNPAUSE' ]:
-                    next_status = event.TaskStatus.retry
-                elif apply_action == 'PAUSE':
-                    next_status = event.TaskStatus.paused
-                else:
-                    raise ValueError("Unknown 'apply' value: %r" % msg )
-                next_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=5)
-                for task_id in selected_tasks:
-                    task = tasks[task_id]
-                    task.update( _task_status = next_status, _run_at_dt = next_time)
-                    self.dao.update_task(task)
+
+    def change_tasks(self, apply_action, task_ids):
+        if apply_action not in ACTION_STATUS_MAP:
+            raise ValueError("apply_action:%r is not one of:%r" % (apply_action, ACTION_STATUS_MAP))
+        _, tasks = self.dao.get_event_tasks_by_taskid(task_ids)
+        selected_tasks = Set()
+        for task_id in task_ids:
+            selected_tasks.add(task_id)
+            if apply_action == 'RETRY_TREE':
+                for dependent_id in utils.flatten_links(tasks, task_id, 'dependents'):
+                    selected_tasks.add(dependent_id)
+        
+        for task_id in selected_tasks:
+            task = tasks[task_id]
+            if apply_action in ['RETRY_TREE', 'RETRY']:
+                task.update(_run_at_dt=datetime.datetime.utcnow() + datetime.timedelta(seconds=5))
+            task.update(_task_status=ACTION_STATUS_MAP[apply_action])
+            self.dao.update_task(task)
+
     
     def pushAll(self):
         for client in self.clients:
@@ -239,9 +238,38 @@ class SocketHandler(websocket.WebSocketHandler):
     
     def on_message(self,msg):
         log.debug( 'on message: %r' % msg)
-        res = state.dispatch(json.loads(msg))
-        self.write_message(json.dumps({'response' : res}))
-        
+        msg_dict = json.loads(msg)
+        action = msg_dict['action']
+        source = msg_dict['source']
+        args=msg_dict['args']
+        res = self.dispatch(action,source,args)
+        self.write_message(json.dumps({
+               'action': action,
+               'source': source,                        
+               'response': res }))
+    
+    def dispatch(self, action,source,args):
+        if action == 'change' :
+            if source == 'tasks' :
+                return state.change_tasks(args['apply'], [ int(i) for i in args['task_id']] )
+        elif action == 'unsubscribe' :
+            if source == 'run' :
+                pass
+        elif action == 'subscribe' :
+            if source == 'events' :
+                pass
+            elif source == 'run' :
+                pass
+        elif action == 'get' :
+            if source == 'event' :
+                if 'task_id' in args:
+                    return state.dao.get_event_tasks_by_taskid(args['task_id'])
+                elif 'event_id' in args:
+                    return state.dao.get_event_tasks_by_eventid(args['event_id'])
+            elif source == 'run' :
+                return state.dao.get_event_tasks_by_eventid(int(args['task_id']),int(args['run']))
+        raise AssertionError('Unrecognized request: {action:%r,source:%r,args:%r}' % (action,source,args))
+            
     
 
     def on_close(self):

@@ -2,7 +2,6 @@ ToDo
 ----
 
 ##Now
-  * document and implement utils.flatten_liks
   * Client-Server Protocol 
     * Client can have  N subscriptions from server
       * MVP will have 1 or 2 subscriptions:
@@ -57,6 +56,7 @@ ToDo
     * hover over depend_on shows arrows
 
 ##Done
+  * document and implement utils.flatten_liks
   * refactor dropdowns: remove click and navigate to url
     * events url should be: /events/z/31/*
     * dropdowns should dynamically change url
