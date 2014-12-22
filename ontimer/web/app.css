@@ -8,6 +8,30 @@ body {
 	padding: 60px 0 60px 0;
 }
 
+tr .ts {
+	font-family: verdana,arial,sans-serif;
+	font-size:   9px;
+	vertical-align: bottom;
+}
+
+.logentry {
+	padding-bottom: 9px;
+	padding-left: 10px;
+	font-family: monospace;
+    white-space: pre;
+}
+.err_stream {
+	color: red;
+}
+
+.return_code {
+	color: blue;
+}
+
+.failure_code {
+	color: red;
+}
+
 #sidebar {
 	padding: 60px 0 60px 0;
 }

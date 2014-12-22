@@ -354,7 +354,6 @@ class Dao:
         order by artifact.artifact_id, artifact.stored_dt, artifact_score.updated_dt""" % (
             _selectors(_TASK, _ARTIFACT, _ARTIFACT_SCORE),
             _join_froms( _join_froms( _TASK[_TBL], _TASK, '', _ARTIFACT), _ARTIFACT, 'OUTER LEFT', _ARTIFACT_SCORE) )
-        print query
         cursor.execute(query,{'task_id':taskid,'run':run})
         task = _fetch_tree(cursor, ((_ARTIFACT[_PK], 'artifacts'), (_ARTIFACT_SCORE[_PK], 'scores')))[0]
         artifacts_list = task['artifacts']

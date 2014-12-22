@@ -34,7 +34,7 @@ _NAME = 3
 def set_non_blocking(f): 
     fd = f.fileno()
     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK | os.O_SYNC)
     return f
 
 def read_stream(run, idx, fd, events):
@@ -68,7 +68,7 @@ class Run:
         for idx, stream in enumerate(self.streams):
             stream[_OUT_FILE] = open(os.path.join(self.rundir,'%s_stream' % stream[_NAME] ),'w')
             io_loop.add_handler(stream[_IN_STREAM], functools.partial(read_stream, self, idx), io_loop.READ)
-        self.storeArtifacts(started='status')
+        self.storeArtifacts(workdir=self.rundir,started='status')
 
     def update_task(self, **kwargs):
         self.task.update(**kwargs)
@@ -192,14 +192,28 @@ class State:
             if apply_action == 'RETRY_TREE':
                 for dependent_id in utils.flatten_links(tasks, task_id, 'dependents'):
                     selected_tasks.add(dependent_id)
-        
+        updated_tasks = {}
         for task_id in selected_tasks:
             task = tasks[task_id]
             if apply_action in ['RETRY_TREE', 'RETRY']:
                 task.update(_run_at_dt=datetime.datetime.utcnow() + datetime.timedelta(seconds=5))
-            task.update(_task_status=ACTION_STATUS_MAP[apply_action])
+            new_status = ACTION_STATUS_MAP[apply_action]
+            task.update(_task_status=new_status)
             self.dao.update_task(task)
-
+            updated_tasks[task_id] = new_status.value
+        return updated_tasks
+    
+    def get_file_fragment(self, fn, start=0,end=-1 ):
+        fp=open(fn)
+        count=end
+        if start > 0:
+            fp.seek(start,0)
+            if count > 0:
+                count -= start
+        if count > 0:
+            return fp.read(count)
+        else:
+            return fp.read()
     
     def pushAll(self):
         for client in self.clients:
@@ -252,6 +266,17 @@ class SocketHandler(websocket.WebSocketHandler):
         if action == 'change' :
             if source == 'tasks' :
                 return state.change_tasks(args['apply'], [ int(i) for i in args['task_id']] )
+        elif action == 'get' :
+            if source == 'event' :
+                if 'task_id' in args:
+                    return state.dao.get_event_tasks_by_taskid(args['task_id'])
+                elif 'event_id' in args:
+                    return state.dao.get_event_tasks_by_eventid(args['event_id'])
+            elif source == 'run' :
+                return state.dao.get_artifacts_for_run(int(args['task_id']),int(args['run']))
+            elif source == 'file' :
+                buf = state.get_file_fragment( args['file'],int(args['start']),int(args['end']))
+                return { 'buf': buf, 'length' : len(buf), 'args': args  }
         elif action == 'unsubscribe' :
             if source == 'run' :
                 pass
@@ -260,14 +285,6 @@ class SocketHandler(websocket.WebSocketHandler):
                 pass
             elif source == 'run' :
                 pass
-        elif action == 'get' :
-            if source == 'event' :
-                if 'task_id' in args:
-                    return state.dao.get_event_tasks_by_taskid(args['task_id'])
-                elif 'event_id' in args:
-                    return state.dao.get_event_tasks_by_eventid(args['event_id'])
-            elif source == 'run' :
-                return state.dao.get_event_tasks_by_eventid(int(args['task_id']),int(args['run']))
         raise AssertionError('Unrecognized request: {action:%r,source:%r,args:%r}' % (action,source,args))
             
     

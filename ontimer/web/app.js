@@ -3,6 +3,7 @@ $(function() {
   var globals = {
     selection : {},
     data_is_ready: function(){ return this.get_event_tasks; }
+    
   };
   
 //  | Task                          | PAUSE | UNPAUSE | SKIP | RETRY | RETRY_TREE |
@@ -100,6 +101,11 @@ $(function() {
   
   function rr(){return globals.renderers[currScreen];}
   
+  function rrcall(method){
+    if( globals.renderers[currScreen][method] ) 
+      globals.renderers[currScreen][method]();
+  }
+  
   function updateContent(State) {
     var prevScreen = currScreen;
     var state = $_.utils.splitUrlPath(State.hash);
@@ -117,11 +123,9 @@ $(function() {
     rr().state=state;
     console.log('updateContent:' + state.toString());
     if( prevScreen != currScreen ) {
-      rr().init();  
+      rrcall('init');  
     }
-    if( currScreen !== 'wait' ){
-      rr().refresh();
-    }
+    rrcall('navigation');  
   };
   
   var History = window.History;
@@ -207,12 +211,13 @@ $(function() {
           this.data_container = d3.select("#data_container");
           this.data_container.html('<span class="glyphicon glyphicon-time"></span> Please Wait....');
         },
-        refresh: function(){
+        refresh: function(data){
           updateContent(History.getState());
+          rr().refresh(data);
         }
       },
       events: {
-        state: $_.utils.splitUrlPath("/events/z1"),
+        state: $_.utils.splitUrlPath("/events/z/1/*"),
         init: function() {
           update_navbar();
           this.data_container = d3.select("#data_container");
@@ -227,11 +232,12 @@ $(function() {
             return column;
           });
           ths.exit().remove();
+          if( globals.data_is_ready() ){
+            this.refresh(globals.get_event_tasks);
+          }
         },
-        refresh: function() {
-          if( !globals.get_event_tasks  ) return;
+        refresh: function(data) {
           if( !this.table ) this.init();
-          
           var event_group_header = function(d) {
             return [ 
                 $_.TCell(d, 'event_id', 1 , none),
@@ -256,7 +262,7 @@ $(function() {
                 $_.TCell(d, 'depend_on', 1) ];
           };
 
-          var tbody = this.table.selectAll("tbody").data(globals.get_event_tasks, function(d, i) { return i + ':' + d.event_id; } );
+          var tbody = this.table.selectAll("tbody").data(data, function(d, i) { return i + ':' + d.event_id; } );
 
           tbody.enter().append("tbody").append("tr").attr("class", "event_row")
           tbody.exit().remove();
@@ -290,37 +296,100 @@ $(function() {
         init: function() {
           var event_id = Number(this.state.path[2]) ;
           var event = globals.events[event_id];
-          console.log(event);
           update_navbar(event);
           var data_container = d3.select("#data_container");
           data_container.html('');
         },
-        refresh: function() {}
+        refresh: function(data) {}
       },
       task: {
-        init: function() {
+        navigation: function(){
           var task_id = Number(this.state.path[2]) ;
           var task = globals.tasks[task_id];
           var event = globals.events[task.event_id];
-          console.log(event,task);
           update_navbar(event,task);
           var data_container = d3.select("#data_container");
           data_container.html('');
         },
-        refresh: function() {}
+        refresh: function(data) {}
       },
       run: {
-        init: function() {
-          var task_id = Number(this.state.path[2]) ;
-          var run_num = this.state.path[3] ;
-          var task = globals.tasks[task_id];
-          var event = globals.events[task.event_id];
-          console.log(event,task);
-          update_navbar(event,task,{run: Number(run_num)});
-          var data_container = d3.select("#data_container");
-          data_container.html('');
+        init: function(){
+          $("#data_container").html('<table class="log"><tbody></tbody></table>');
         },
-        refresh: function() {}
+        navigation: function(){
+          this.task_id = Number(this.state.path[2]) ;
+          this.run_num = this.state.path[3] ;
+          this.task = globals.tasks[this.task_id];
+          this.event = globals.events[this.task.event_id];
+          update_navbar(this.event,this.task,{run: Number(this.run_num)});
+          ws.send(JSON.stringify({ 
+            action: 'get', source: 'run', 
+            args: { task_id: this.task_id , run: this.run_num } }));
+        },
+        refresh: function(data) {
+          if( data.action === 'get' ){
+            if( data.source === 'run') {
+              var r = data.response;
+              var workdir = r.artifacts.workdir.value;
+              var logs = [];
+              function process_log(artifact,filename){
+                if(artifact){
+                  var start = 0;
+                  for ( var i = 0; i < artifact.scores.length; i++) {
+                    var score = artifact.scores[i];
+                    var end = score.score;
+                    var entry = { 
+                        t: score.updated_dt,
+                        file: workdir + filename,
+                        start: start,
+                        end: end,
+                        style: filename,
+                    };
+                    start = end;
+                    (function(){ 
+                      for ( var j = 0; j < logs.length; j++) {
+                        if( logs[j].t > entry.t ){
+                          logs.splice(j, 0, entry);
+                          return;
+                        }
+                      }
+                      logs.push(entry);
+                    })();
+                  }
+                }
+              }
+              process_log(r.artifacts.out, 'out_stream' );
+              process_log(r.artifacts.err, 'err_stream' );
+              this.logs = logs;
+              var tbody = $("#data_container table.log tbody") ;
+              tbody.html('');
+              tbody.append('<tr><td class="ts">'+r.artifacts.started.stored_dt+'</td><td class="logentry"></td></tr>')
+              for ( var i = 0; i < logs.length; i++) {
+                tbody.append('<tr  id="log'+i+'"><td class="ts">'+logs[i].t+'</td><td class="logentry '+logs[i].style+'"></td></tr>')
+                ws.send(JSON.stringify({ 
+                  action: 'get', source: 'file', 
+                  args: { file: logs[i].file , start: logs[i].start, end: logs[i].end } }));
+              }
+              if(r.artifacts.finished){
+                var rc = r.artifacts.return_code.value ;
+                
+                tbody.append('<tr><td class="ts">'+r.artifacts.finished.stored_dt+'</td><td class="logentry">Return code: '+
+                    '<span class="'+ (rc == 0 ? 'return_code' : 'failure_code')+'">'+ rc +'</span></td></tr>')
+                
+              }
+            }else if( data.source === 'file') {
+              var r = data.response;
+              for ( var i = 0; i < this.logs.length; i++) {
+                var l = this.logs[i];
+                if( r.args.file == l.file && r.args.start == l.start && r.args.end == l.end ){
+                  $('tr#log'+i+' td.logentry').text(r.buf);
+                  break;
+                }
+              }
+            }
+          }
+        }
       }
   };
   
@@ -329,7 +398,6 @@ $(function() {
   }
   
   function refresh_dropdowns() {
-    
     globals.bimapEventStatus = $_.utils.BiMap(globals.meta.EventStatus);
     globals.bimapTaskStatus = $_.utils.BiMap(globals.meta.TaskStatus);
     globals.bimapEventTypes = $_.utils.BiMap(globals.meta.EventTypes);
@@ -386,14 +454,14 @@ $(function() {
     if (json.meta) {
       globals.meta = json.meta;
       refresh_dropdowns();
+    }else{
+      if(!refresh){
+//        console.log(json);
+        rr().refresh(json);
+      }
     }
     return refresh;
   }
-
-
-  
-  
-  
 
   function connect(){
     var $container = $('#debug');
@@ -414,7 +482,7 @@ $(function() {
   
       var json = JSON.parse(ev.data)
       if ( process_content(json) ){
-        rr().refresh();
+        rr().refresh(globals.get_event_tasks);
       }
     };
     
@@ -434,8 +502,10 @@ $(function() {
   setInterval(function() {
     if( ws.dead ){
       ws = connect();
-    }else if ( globals.data_is_ready() )
-      rr().refresh();
+    }else if ( globals.data_is_ready() && currScreen == 'events' ){
+      rr().refresh(globals.get_event_tasks);
+      
+    }
   }, 1000 * 30);
   
   History.pushState({urlPath: window.location.pathname, time: new Date()}, $("title").text(), location.url);

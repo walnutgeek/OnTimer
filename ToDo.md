@@ -2,42 +2,44 @@ ToDo
 ----
 
 ##Now
-  * Client-Server Protocol 
-    * Client can have  N subscriptions from server
-      * MVP will have 1 or 2 subscriptions:
-        * events subscription (always on)
-          { action : 'subscribe',
-            source : 'events',
-            args: { interval-type : 'z' ,
-                    interval-time : '31' ,
-                    event-type : '*' } 
-          }
-        * log subscription (only when run screen is open and displaying live run)
-          { action : 'subscribe',
-            source : 'run',
-            args: { task_id : '382' ,
-                    run_num : '3'   } 
-          }
-    * Client can request data from server:
-      * odd event (event outside of subscription)
-        * { action: 'get', source: 'event', args: { event_id: 35 } }
-        * { action: 'get', source: 'event', args: { task_id: 3 } }
-      * search query (not a priority for MVP, ignore it for now just keep in mind more types of requests)
-        * { action: 'get', source: 'search', args: { q: 'djfl djfld dlfj' } }
-    * Client can request action from server
-      * { action: 'change', source: 'tasks', args: { apply: 'PAUSE', task_id: [ 383, 385, 387 ] } }
-  * send task actions
-  * run screen
+  * restrict file request to server root
+  * pypy registration
   * mvp deployment 
+   
+##Later 
+  * implemnet event subscription
+  * implement log subscription
   * documentation
-  * bitstar and pypy
+  * bitstar 
   * event screen
   * task screen
   * generator screen
-   
-##Later 
   * documentation
     * extract CliServProtocol from todo list into documentation 
+	  * Document Client-Server Protocol 
+	    * Client can have  N subscriptions from server
+	      * MVP will have 1 or 2 subscriptions:
+	        * events subscription (always on)
+	          { action : 'subscribe',
+	            source : 'events',
+	            args: { interval-type : 'z' ,
+	                    interval-time : '31' ,
+	                    event-type : '*' } 
+	          }
+	        * log subscription (only when run screen is open and displaying live run)
+	          { action : 'subscribe',
+	            source : 'run',
+	            args: { task_id : '382' ,
+	                    run_num : '3'   } 
+	          }
+	    * Client can request data from server:
+	      * odd event (event outside of subscription)
+	        * { action: 'get', source: 'event', args: { event_id: 35 } }
+	        * { action: 'get', source: 'event', args: { task_id: 3 } }
+	      * search query (not a priority for MVP, ignore it for now just keep in mind more types of requests)
+	        * { action: 'get', source: 'search', args: { q: 'djfl djfld dlfj' } }
+	    * Client can request action from server
+	      * { action: 'change', source: 'tasks', args: { apply: 'PAUSE', task_id: [ 383, 385, 387 ] } }
     * home page and quick start 
     * convert docs MD into rst
 	  * pandoc ?
@@ -56,6 +58,10 @@ ToDo
     * hover over depend_on shows arrows
 
 ##Done
+  * get log fragment event_id/task_id/run/start/end call
+  * display log
+  * implement log screen (run screen)
+  * send task actions
   * document and implement utils.flatten_liks
   * refactor dropdowns: remove click and navigate to url
     * events url should be: /events/z/31/*
