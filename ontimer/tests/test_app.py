@@ -27,7 +27,7 @@ def create_sample_config_server(abs_dir, config_file = sample_config):
     return dao
     
 
-def zest_app():
+def test_app():
     test_dir = os.path.abspath('./test-out/test_app')
     dao = create_sample_config_server(test_dir)
     Popen(['coverage', 'run', '-p','-m', 'ontimer.app', 
