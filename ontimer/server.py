@@ -34,13 +34,13 @@ _NAME = 3
 def set_non_blocking(f): 
     fd = f.fileno()
     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK | os.O_SYNC)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK | os.O_SYNC )
     return f
 
 def read_stream(run, idx, fd, events):
     buf = fd.read()
     if len(buf):
-        run.streams[idx][_OUT_FILE].write(buf)
+        os.write(run.streams[idx][_OUT_FILE],buf)
         p = run.streams[idx][_COUNTER] + len(buf)
         run.addArtifactScore(run.streams[idx][3],p)
         run.streams[idx][_COUNTER] = p 
@@ -58,7 +58,9 @@ class Run:
         self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         self.finished = False
         os.makedirs(self.rundir)
-        self.process = subprocess.Popen(self.args, cwd=self.rundir, stderr=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+        task_env=os.environ.copy()
+        task_env['PYTHONUNBUFFERED']='1'
+        self.process = subprocess.Popen(self.args, cwd=self.rundir, env=task_env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
         log.info( 'started task_id=%d cmd=%s' % ( self.task['task_id'], self.task_state['cmd']))
         self.streams = ( 
              [ set_non_blocking(self.process.stdout), None, 0, 'out'],
@@ -66,7 +68,7 @@ class Run:
         )
         io_loop = ioloop.IOLoop.instance()
         for idx, stream in enumerate(self.streams):
-            stream[_OUT_FILE] = open(os.path.join(self.rundir,'%s_stream' % stream[_NAME] ),'w')
+            stream[_OUT_FILE] = os.open(os.path.join(self.rundir,'%s_stream' % stream[_NAME] ), os.O_WRONLY | os.O_SYNC | os.O_CREAT)
             io_loop.add_handler(stream[_IN_STREAM], functools.partial(read_stream, self, idx), io_loop.READ)
         self.storeArtifacts(workdir=self.rundir,started='status')
 
@@ -112,8 +114,8 @@ class Run:
             io_loop = ioloop.IOLoop.instance()
             for stream in self.streams:
                 io_loop.remove_handler(stream[_IN_STREAM])
-                for f in stream[_IN_STREAM:_OUT_FILE]:
-                    f.close()
+                stream[_IN_STREAM].close()
+                os.close(stream[_OUT_FILE])
             return False
         return True
         
@@ -204,6 +206,8 @@ class State:
         return updated_tasks
     
     def get_file_fragment(self, fn, start=0,end=-1 ):
+        if not(os.path.abspath(fn).startswith(self.dao.root)):
+            raise ValueError('path:%s is outside of root:%s' % (fn,self.dao.root))
         fp=open(fn)
         count=end
         if start > 0:
