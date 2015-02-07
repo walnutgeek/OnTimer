@@ -22,7 +22,7 @@ def create_sample_config_server(abs_dir, config_file = sample_config):
     dao.set_config(open(config_file).read())    
     config=dao.apply_config()
     gens = [event.Generator(config,gen_data) for gen_data in dao.load_active_generators()]
-    dt=datetime(2014,9,15)
+    dt=datetime(2015,2,2)
     dao.emit_event(gens[1].setupEvent(dt))
     return dao
     

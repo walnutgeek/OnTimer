@@ -204,6 +204,21 @@ $(function() {
     }
   }
   
+  var entityMap = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': '&quot;',
+      "'": '&#39;',
+      "/": '&#x2F;'
+  };
+
+  function escapeHtml(string) {
+    return String(string).replace(/[&<>"'\/]/g, function (s) {
+      return entityMap[s];
+    });
+  }
+    
   globals.renderers = {
       wait: {
         init: function() {
@@ -364,7 +379,7 @@ $(function() {
               this.logs = logs;
               var tbody = $("#data_container table.log tbody") ;
               tbody.html('');
-              tbody.append('<tr><td class="ts">'+r.artifacts.started.stored_dt+'</td><td class="logentry"></td></tr>')
+              tbody.append('<tr><td class="ts">'+r.artifacts.started.stored_dt+'</td><td class="logentry">'+escapeHtml(r.task_state)+'</td></tr>')
               for ( var i = 0; i < logs.length; i++) {
                 tbody.append('<tr  id="log'+i+'"><td class="ts">'+logs[i].t+'</td><td class="logentry '+logs[i].style+'"></td></tr>')
                 ws.send(JSON.stringify({ 
