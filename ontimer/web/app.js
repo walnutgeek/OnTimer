@@ -6,11 +6,12 @@ $(function() {
     
   };
   
-//  | Task                          | PAUSE | UNPAUSE | SKIP | RETRY | RETRY_TREE |
-//  |-------------------------------|-------|---------|------|-------|------------|
-//  | scheduled,running,fail,retry  |  Y    |  N      | Y    |  N    | N          |
-//  | paused                        |  N    |  Y      | Y    |  N    | N          |
-//  | success, skip                 |  N    |  N      | N    |  Y    | Y          |
+//  | Task            | PAUSE | UNPAUSE | SKIP | RETRY | RETRY_TREE | RUN_NOW |
+//  |-----------------|-------|---------|------|-------|------------|---------|
+//  | running,fail    |  Y    |  N      | Y    |  N    | N          | N       |
+//  | scheduled,retry |  Y    |  N      | Y    |  N    | N          | Y       |
+//  | paused          |  N    |  Y      | Y    |  N    | N          | N       |
+//  | success, skip   |  N    |  N      | N    |  Y    | Y          | N       |
 
   var task_actions = {
       PAUSE: ['scheduled','running','fail','retry'],
@@ -18,6 +19,7 @@ $(function() {
       SKIP: ['scheduled','running','fail','retry','paused'],
       RETRY: ['success','skip'],
       RETRY_TREE: ['success', 'skip'],
+      RUN_NOW: ['scheduled', 'retry'],
   };
 
   function update_dropdown(id,data,prefix){

@@ -53,7 +53,7 @@ class Run:
         self.task = task
         self.update_task( _run_count = task['run_count'] + 1 , _task_status = event.TaskStatus.running )
         self.task_state = json.loads(self.task['task_state'])
-        self.args = shlex.split(self.task_state['cmd'])
+        self.args = shlex.split(self.task_state['cmd'].strip())
         self.task_vars = event.task_vars(self.task)
         self.rundir = self.state.config.globals['logs_dir'].format(**self.task_vars)
         self.finished = False
@@ -121,7 +121,7 @@ class Run:
         
 ACTION_STATUS_MAP =  {'RETRY_TREE':event.TaskStatus.retry, 'RETRY':event.TaskStatus.retry, 
                       'SKIP':event.TaskStatus.skip, 'PAUSE': event.TaskStatus.paused, 
-                      'UNPAUSE':event.TaskStatus.retry}
+                      'UNPAUSE':event.TaskStatus.retry, 'RUN_NOW':event.TaskStatus.retry,}
 
 class State:
     def __init__(self, dao):
@@ -197,7 +197,7 @@ class State:
         updated_tasks = {}
         for task_id in selected_tasks:
             task = tasks[task_id]
-            if apply_action in ['RETRY_TREE', 'RETRY']:
+            if apply_action in ['RETRY_TREE', 'RETRY', 'RUN_NOW']:
                 task.update(_run_at_dt=datetime.datetime.utcnow() + datetime.timedelta(seconds=5))
             new_status = ACTION_STATUS_MAP[apply_action]
             task.update(_task_status=new_status)
